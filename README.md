@@ -49,13 +49,14 @@ If an additional line is needed, e.g. for the transcription, the `\glc` (gloss l
 
 ## Free tranlsation (`\ft`)
 
-A free translation line can be added at the bottom of the gloss using the `\ft` command, which takes a line of text. By default, free translation lines are wrapped in quotation marks and have an italics style applied.
+A free translation line can be added at the bottom of the gloss using the `\ft` command, which takes a line of text. By default, free translation lines are wrapped in quotation marks and have an italics style applied. Multiple `\ft` lines are supported and will render in order (either stacked line-by-line or merged into a single paragraph depending on the setting described below).
 
 ```gloss
 \gla Péter-nek van egy macská-ja
 \glb pe:tɛrnɛk vɒn ɛɟ mɒt͡ʃka:jɒ
 \glc Peter-DAT exist INDEF cat-POSS.3SG
 \ft Peter has a cat.
+\ft It is sitting on the rug.
 ```
 
 ![Example 03](_examples/example03.png)
@@ -153,11 +154,26 @@ A source for the text in a gloss can be specified using the `\src` command, whic
 
 ![Example 18](_examples/example18.png)
 
+## Inline links and footnote references
+
+The plugin supports a safe subset of inline markup in three places only:
+
+- Level A (source language) tokens
+- The preamble line (`\ex`)
+- Free translation lines (`\ft`)
+
+Supported inline forms:
+
+- Obsidian wiki links: `[[target]]` and `[[target|label]]`
+- Footnote references: `[^id]` (rendered as a superscript reference, not a full footnote)
+
+Inline parsing can be toggled via the **Inline links/footnote refs** setting. This is a safe, limited parser and does not enable general Markdown-in-token.
+
 ## Alternative syntax (`\gl`)
 
 An alternative syntax for gloss lines is available, where source language elements are adjacent to their glosses in the markup. This has an advantage of making the markup easier to read and write, especially for longer glosses.
 
-To use this syntax, a code block with `ngloss` tag is used, instead of the regular `gloss` tag as seen earlier:
+To use this syntax, a code block with `ngloss` tag is used, instead of the regular `gloss` tag as seen earlier. You can also change the **Default syntax** setting so that ```gloss``` blocks are parsed as `ngloss` without changing your notes.
 
 ````
 ```ngloss
@@ -197,6 +213,18 @@ In this mode, commands for individual gloss lines (`\gla`, `\glb`, `\glc`) are r
 ```
 
 ![Example 06b](_examples/example06b.png)
+
+### Per-token and per-cell class hooks (ngloss only)
+
+In `ngloss` mode, you can add class hooks to tokens or individual gloss cells by appending a class block in curly braces:
+
+- `TOKEN{class1,class2}` applies classes to the token wrapper (rendered as `ling-tok-<class>`).
+- `[CELL]{class1,class2}` applies classes to the specific level cell (rendered as `ling-cell-<class>`).
+
+```ngloss
+\gl སེམས་ཅན{agent,noun} [SENTIENT]{sem} [N]
+\gl བྱེད{verb} [do] [V]{pos-verb}
+```
 
 While it is generally cleaner to write each element on its own line, as in the example above, it is not strictly necessary and all tokens can be placed on the line following the `\gl` command for the same result. Additionally, spaces between bracketed `[tokens]` are not required, unlike between bare tokens. (Spaces within `[tokens]` work the same way as in the other syntax.)
 
@@ -364,9 +392,7 @@ This option enables using underscore characters for whitespace in level A elemen
 
 ### `markup`
 
-This option enables processing of the text formatting markup in the source text, the gloss elements and the free translation. This option takes no values.
-
-**NOTE:** The markup processing is currently not implemented and will cause an error if enabled.
+This option enables the safe inline parser for wiki links (`[[target]]`, `[[target|label]]`) and footnote references (`[^id]`) in the preamble (`\ex`), the level A line, and the free translation (`\ft`). This option takes no values.
 
 ### `style`, `gl*style`, `exstyle`, `ftstyle`, `srcstyle`
 
@@ -470,6 +496,17 @@ This is a style that's meant to select an alternative appearance for the source.
 ```
 
 ![Example 25](_examples/example25.png)
+
+## New rendering settings
+
+The following settings are available in *Settings → Interlinear Glossing*:
+
+- **Default syntax**: choose whether `gloss` blocks use the regular syntax or the `ngloss` alternative by default.
+- **Translation rendering**: stack multiple `\ft` lines or merge them into a single paragraph.
+- **Inline links/footnote refs**: toggle the safe inline parser for Level A, `\ex`, and `\ft`.
+- **Compact mode**: reduce spacing between gloss lines and tokens.
+- **Box tokens**: add a subtle border around each token.
+- **Center token text**: center-align text inside each token.
 
 ## Option Defaults
 
