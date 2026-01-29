@@ -18,12 +18,23 @@ export interface IGlossOptions {
     styles: IGlossOptionStyles;
 }
 
+export type InlineNode =
+    | { type: "text"; text: string }
+    | { type: "wikiLink"; target: string; label: string }
+    | { type: "footnoteRef"; id: string };
+
+export interface IGlossLevelCell {
+    nodes: InlineNode[];
+    classes: string[];
+}
+
 export interface IGlossNumber {
     value: string;
 }
 
 export interface IGlossElement {
-    levels: string[];
+    levels: IGlossLevelCell[];
+    tokenClasses: string[];
 }
 
 export interface IGlossData {
@@ -33,13 +44,13 @@ export interface IGlossData {
     label: string;
     preamble: string;
     elements: IGlossElement[];
-    translation: string;
+    translation: string[];
     source: string;
 }
 
 
 export const getDefaultGlossOptions = (): IGlossOptions => ({
-    useMarkup: false,
+    useMarkup: true,
     altSpaces: false,
     styles: {
         global: [],
@@ -55,6 +66,12 @@ export const getDefaultGlossOptions = (): IGlossOptions => ({
 
 export const createGlossElement = (): IGlossElement => ({
     levels: [],
+    tokenClasses: [],
+});
+
+export const createGlossLevelCell = (text = "", classes: string[] = []): IGlossLevelCell => ({
+    nodes: [{ type: "text", text }],
+    classes,
 });
 
 export const createGlossData = (nlevel: boolean, options?: IGlossOptions): IGlossData => ({
@@ -65,7 +82,7 @@ export const createGlossData = (nlevel: boolean, options?: IGlossOptions): IGlos
     },
     label: "",
     preamble: "",
-    translation: "",
+    translation: [],
     source: "",
     elements: [],
 });

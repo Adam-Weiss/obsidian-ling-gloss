@@ -84,3 +84,10 @@ export const arrayFill = <T>(array: T[], limit: number, func: (index: number) =>
 
 export const sanitizeCssClasses = (classes: string[]): string[] =>
     classes.filter(cls => cls.length > 0).map(cls => cls.replace(/[^a-z0-9_-]+/ig, "-"));
+
+export const sanitizeClassNames = (classes: string[]): string[] =>
+    classes
+        .map(cls => cls.trim())
+        .filter(cls => cls.length > 0)
+        .map(cls => cls.replace(/[^a-z0-9_-]+/ig, "-"))
+        .filter(cls => cls.length > 0);

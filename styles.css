@@ -134,3 +134,34 @@
 .ling-gloss-level-a.ling-style-cjk {
     font-style: unset !important;
 }
+
+/* Inline link/footnote helpers */
+
+.ling-footnote-ref {
+    font-size: 0.85em;
+    vertical-align: super;
+}
+
+/* Design option helpers */
+
+.ling-opt-compact .ling-gloss-body > div:not(:last-child) {
+    margin-bottom: 0.25em;
+}
+
+.ling-opt-compact .ling-gloss-elements {
+    gap: 0.5em 0.5em;
+}
+
+.ling-opt-compact .ling-gloss-postamble {
+    gap: 0 0.25em;
+}
+
+.ling-opt-tokenbox {
+    padding: 0.25em 0.4em;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+}
+
+.ling-opt-center .ling-gloss-element {
+    text-align: center;
+}
