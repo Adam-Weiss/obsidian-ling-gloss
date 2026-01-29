@@ -1,7 +1,7 @@
 import { PluginSettingTab, Plugin, Setting } from "obsidian";
 
 import { IGlossOptions, IGlossOptionStyles } from "src/data/gloss";
-import { GlossAlignMode } from "src/data/settings";
+import { GlossAlignMode, GlossDefaultSyntax, TranslationRendering } from "src/data/settings";
 import { KeysOfType, sanitizeCssClasses } from "src/utils";
 
 import { makeDesc } from "./helpers";
@@ -16,9 +16,33 @@ export class PluginSettingsTab extends PluginSettingTab {
     display() {
         this.containerEl.empty();
 
+        this.addDefaultSyntaxSettings();
         this.addAlignModeSettings();
+        this.addTranslationSettings();
+        this.addDesignSettings();
         this.addSwitchSettings();
         this.addStyleSettings();
+    }
+
+    private addDefaultSyntaxSettings() {
+        const { defaultSyntax } = this.settings.get();
+
+        new Setting(this.containerEl)
+            .setName("Default syntax")
+            .setDesc("Treat gloss code blocks as either the regular \\gla/\\glb syntax or the alternative \\gl (n-level) syntax.")
+            .addDropdown(component => {
+                component
+                    .addOptions({
+                        gloss: "gloss",
+                        ngloss: "ngloss",
+                    })
+                    .setValue(defaultSyntax)
+                    .onChange(async value => {
+                        await this.settings.update({
+                            defaultSyntax: value as GlossDefaultSyntax,
+                        });
+                    });
+            });
     }
 
     private addAlignModeSettings() {
@@ -114,7 +138,75 @@ export class PluginSettingsTab extends PluginSettingTab {
             .setHeading();
 
         this.addSwitchSettingByKey("altSpaces", "Alternate spaces", "glaspaces");
-        this.addSwitchSettingByKey("useMarkup", "Process markup", "markup");
+        this.addSwitchSettingByKey("useMarkup", "Inline links/footnote refs", "markup");
+    }
+
+    private addTranslationSettings() {
+        const { translationRendering } = this.settings.get();
+
+        new Setting(this.containerEl)
+            .setName("Translation rendering")
+            .setDesc("Controls how multiple \\ft lines are displayed in the postamble.")
+            .addDropdown(component => {
+                component
+                    .addOptions({
+                        stacked: "Stacked lines",
+                        paragraph: "Paragraph",
+                    })
+                    .setValue(translationRendering)
+                    .onChange(async value => {
+                        await this.settings.update({
+                            translationRendering: value as TranslationRendering,
+                        });
+                    });
+            });
+    }
+
+    private addDesignSettings() {
+        const { compactMode, boxTokens, centerTokens } = this.settings.get();
+
+        new Setting(this.containerEl)
+            .setName("Design options")
+            .setHeading();
+
+        new Setting(this.containerEl)
+            .setName("Compact mode")
+            .setDesc("Reduce spacing between gloss lines and tokens.")
+            .addToggle(component => {
+                component
+                    .setValue(compactMode)
+                    .onChange(async value => {
+                        await this.settings.update({
+                            compactMode: value,
+                        });
+                    });
+            });
+
+        new Setting(this.containerEl)
+            .setName("Box tokens")
+            .setDesc("Add a subtle box around each token.")
+            .addToggle(component => {
+                component
+                    .setValue(boxTokens)
+                    .onChange(async value => {
+                        await this.settings.update({
+                            boxTokens: value,
+                        });
+                    });
+            });
+
+        new Setting(this.containerEl)
+            .setName("Center token text")
+            .setDesc("Center-align text inside each gloss token.")
+            .addToggle(component => {
+                component
+                    .setValue(centerTokens)
+                    .onChange(async value => {
+                        await this.settings.update({
+                            centerTokens: value,
+                        });
+                    });
+            });
     }
 
     private addStyleSettings() {

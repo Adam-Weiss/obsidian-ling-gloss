@@ -22,6 +22,7 @@ interface IBlockOptions {
     kind: string;
     text: string;
     cls?: string[];
+    extraCls?: string[];
     always?: boolean;
     format?: (text: string) => string | DocumentFragment;
 }
@@ -32,8 +33,19 @@ export const formatWhitespace = (text: string, nbsp = false): string =>
 export const renderBlock = (target: HTMLElement, options: IBlockOptions) => {
     if (options.text.length < 1 && !options.always) return;
 
-    target.createDiv({
-        text: options.format?.(options.text) ?? formatWhitespace(options.text),
-        cls: [getStyleKind(options.kind), ...getStyleClasses(options.cls ?? [])],
+    const content = options.format?.(options.text) ?? formatWhitespace(options.text);
+
+    const el = target.createDiv({
+        cls: [
+            getStyleKind(options.kind),
+            ...getStyleClasses(options.cls ?? []),
+            ...(options.extraCls ?? []),
+        ],
     });
+
+    if (content instanceof DocumentFragment) {
+        el.appendChild(content);
+    } else {
+        el.setText(content);
+    }
 };
