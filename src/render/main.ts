@@ -1,5 +1,5 @@
-import { IGlossData, InlineNode, IGlossLevelCell } from "src/data/gloss";
-import { getDefaultAlignMarkers } from "src/data/settings";
+import { IGlossData, InlineNode, IGlossLevelCell, IGlossElement } from "src/data/gloss";
+import { BoxTokenMode, getDefaultAlignMarkers } from "src/data/settings";
 import { PluginSettingsWrapper } from "src/settings/wrapper";
 import { sanitizeClassNames } from "src/utils";
 
@@ -25,7 +25,22 @@ export class GlossRenderer {
 
     renderGloss(target: HTMLElement, data: IGlossData) {
         const { styles, altSpaces, useMarkup } = data.options;
-        const { compactMode, centerTokens, boxTokens, translationRendering } = this.settings.get();
+        const {
+            compactMode,
+            centerTokens,
+            boxTokens,
+            translationRendering,
+            wrapBehavior,
+            tokenGap,
+            boxPaddingBlock,
+            boxPaddingInline,
+            boxBorderWidth,
+            boxBorderRadius,
+            baseFontScale,
+            translationFontScale,
+            lineHeight,
+            maxWidth,
+        } = this.settings.get();
 
         target.empty();
 
@@ -34,7 +49,20 @@ export class GlossRenderer {
                 getStyleKind(""),
                 ...(compactMode ? ["ling-opt-compact"] : []),
                 ...(centerTokens ? ["ling-opt-center"] : []),
+                ...(wrapBehavior === "nowrap" ? ["ling-opt-nowrap"] : []),
             ],
+        });
+
+        this.applyContainerStyles(container, {
+            tokenGap,
+            boxPaddingBlock,
+            boxPaddingInline,
+            boxBorderWidth,
+            boxBorderRadius,
+            baseFontScale,
+            translationFontScale,
+            lineHeight,
+            maxWidth,
         });
 
         renderBlock(container, {
@@ -67,11 +95,12 @@ export class GlossRenderer {
 
             for (const elementData of data.elements) {
                 const { levels } = elementData;
+                const boxToken = this.shouldBoxToken(elementData, boxTokens);
                 const element = elements.createDiv({
                     cls: [
                         getStyleKind("element"),
                         ...this.getTokenClassNames(elementData.tokenClasses ?? []),
-                        ...(boxTokens ? ["ling-opt-tokenbox"] : []),
+                        ...(boxToken ? ["ling-opt-tokenbox"] : []),
                     ],
                 });
 
@@ -218,6 +247,68 @@ export class GlossRenderer {
 
     private getCellText(cell: IGlossLevelCell): string {
         return cell.nodes.map(node => node.type === "text" ? node.text : "").join("");
+    }
+
+    private shouldBoxToken(element: IGlossElement, mode: BoxTokenMode): boolean {
+        if (element.boxOverride === "box") return true;
+        if (element.boxOverride === "nobox") return false;
+
+        switch (mode) {
+            case "on":
+                return true;
+            case "off":
+                return false;
+            case "auto":
+                return this.isMultilineToken(element);
+            default:
+                return false;
+        }
+    }
+
+    private isMultilineToken(element: IGlossElement): boolean {
+        let nonEmptyLevels = 0;
+
+        for (const level of element.levels) {
+            if (this.getCellText(level).trim().length > 0) {
+                nonEmptyLevels += 1;
+                if (nonEmptyLevels > 1) return true;
+            }
+        }
+
+        return false;
+    }
+
+    private applyContainerStyles(
+        container: HTMLElement,
+        styles: {
+            tokenGap: number;
+            boxPaddingBlock: number;
+            boxPaddingInline: number;
+            boxBorderWidth: number;
+            boxBorderRadius: number;
+            baseFontScale: number;
+            translationFontScale: number;
+            lineHeight: number;
+            maxWidth: number;
+        }
+    ) {
+        container.style.setProperty("--ling-token-gap", `${styles.tokenGap}em`);
+        container.style.setProperty("--ling-token-gap-compact", `${styles.tokenGap * 0.5}em`);
+        container.style.setProperty("--ling-box-padding-block", `${styles.boxPaddingBlock}em`);
+        container.style.setProperty("--ling-box-padding-inline", `${styles.boxPaddingInline}em`);
+        container.style.setProperty("--ling-box-border-width", `${styles.boxBorderWidth}px`);
+        container.style.setProperty("--ling-box-border-radius", `${styles.boxBorderRadius}px`);
+        container.style.setProperty("--ling-font-scale", `${styles.baseFontScale}`);
+        container.style.setProperty("--ling-translation-scale", `${styles.translationFontScale}`);
+
+        if (styles.lineHeight > 0) {
+            container.style.setProperty("--ling-line-height", `${styles.lineHeight}`);
+        }
+
+        container.style.setProperty(
+            "--ling-max-width",
+            styles.maxWidth > 0 ? `${styles.maxWidth}rem` : "100%"
+        );
     }
 
     private getTokenClassNames(classes: string[]): string[] {

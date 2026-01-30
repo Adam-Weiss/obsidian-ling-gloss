@@ -14,6 +14,7 @@ Interlinear Glossing Plus is an Obsidian plugin for writing interlinear glosses 
 - **Alignment behavior** preserved (same DOM structure and alignment logic as before).
 - **Multiple `\ft` translations** with stacked or paragraph rendering.
 - **Per-token and per-cell class hooks** (ngloss only): `{class1,class2}`.
+- **Mixed boxed + unboxed tokens** via auto-boxing or per-token `#box` / `#nobox` markers.
 - **Safe inline links/footnote refs** in Level A, `\ex`, and `\ft` only.
 - **Per-gloss options** via `\set` and `\set*`.
 
@@ -21,9 +22,9 @@ Interlinear Glossing Plus is an Obsidian plugin for writing interlinear glosses 
 - **Default syntax** (`gloss` or `ngloss`).
 - **Translation rendering** (`Stacked lines` or `Paragraph`).
 - **Inline links/footnote refs** (toggle).
-- **Compact mode** (reduced spacing).
-- **Box tokens** (subtle borders).
-- **Center token text** (align centers).
+- **Boxed tokens** (off/on/auto), with spacing and border controls.
+- **Formatting** (font scaling, line spacing, wrap behavior, max width).
+- **Compact mode** (reduced spacing) and **Center token text** (align centers).
 - **Alignment mode** (none / default markers / custom markers), **align level**, **center fallback**.
 - **Default `\set` options** (global styles, per-level styles, etc.).
 
@@ -141,6 +142,33 @@ Use `ngloss` blocks when you want a token to be followed by its gloss(es) inline
 
 You can set **Default syntax** to `ngloss`, which makes `gloss` blocks behave as if they were `ngloss` blocks. Existing `ngloss` blocks always work.
 
+### 4.4 Mixing boxed and unboxed tokens
+
+You can mix boxed and inline tokens in the same gloss line without any custom CSS. There are two ways:
+
+**A) Auto-boxing (recommended):**
+Enable **Settings → Boxed tokens → Boxing mode → Auto**. Tokens that have multiple non-empty gloss lines will be boxed; single-line tokens remain inline.
+
+**B) Per-token marker:**
+Append `#box` or `#nobox` to a token’s class list to force boxing on or off. This works in both regular gloss and `ngloss` syntax.
+
+**Examples (regular gloss):**
+
+```gloss
+\gla the{#box} cat{#box} ,{#nobox} sleep-s{#box}
+\glb DEF{#box} cat{#box} ,{#nobox} sleep-PRS.3SG{#box}
+\ft The cat sleeps.
+```
+
+**Examples (`ngloss`):**
+
+```ngloss
+\gl the{#box} [DEF] cat{#box} [cat] ,{#nobox} sleep-s{#box} [sleep-PRS.3SG]
+\ft The cat sleeps.
+```
+
+The `#box`/`#nobox` marker is stripped from the rendered output and only affects the token wrapper.
+
 ---
 
 ## 5) Command reference
@@ -204,15 +232,27 @@ Inline parsing is **off by default per gloss**, but can be enabled globally in s
 - `\ex` preamble line
 - `\ft` translation lines
 
-**Example (English + wiki links):**
+### 6.1 Notes & links inside gloss blocks
+
+Use the `\ex` preamble or `\ft` translation lines for notes, gloss commentary, or citations. When **Inline links/footnote refs** is enabled, you can safely include Obsidian links and footnote markers.
+
+**Internal links (wiki links):**
 
 ```gloss
 \set markup
-\ex [[Example Source|Example]] text.[^a]
+\ex See [[Glossary]] for terminology.
 \gla the [[cat]] sleep-s
 \glb DEF cat sleep-PRS.3SG
-\ft See [[Glossary]].[^1]
+\ft Similar to [[Another Entry|this example]].[^note1]
 ```
+
+**External links (limitations):**
+- Markdown-style links like `[label](https://example.com)` are **not parsed** inside gloss content.
+- Raw URLs (e.g., `https://example.com`) render as plain text.
+- If you need clickable external links, place them outside the gloss block or keep the URL visible in the note text.
+
+**Footnote refs:**
+Footnote markers like `[^note1]` are rendered as superscripts in gloss output, but they do not expand into full footnotes inside the gloss block itself.
 
 ---
 
@@ -222,6 +262,7 @@ In `ngloss`, you can attach class hooks to tokens or bracketed cells:
 
 - `TOKEN{class1,class2}` → applied to the token wrapper (e.g., `ling-tok-class1`).
 - `[CELL]{class1,class2}` → applied to the gloss cell (e.g., `ling-cell-class1`).
+- Reserved markers: add `#box` or `#nobox` in the same braces to force boxing on/off for that token.
 
 **Example (Tibetan):**
 
@@ -246,18 +287,29 @@ Open **Settings → Interlinear Glossing Plus**.
 ### 8.2 Inline parsing
 - **Inline links/footnote refs**: toggle safe inline parsing in level A, `\ex`, and `\ft`.
 
-### 8.3 Design toggles
-- **Compact mode**: reduces spacing between lines/tokens (adds `ling-opt-compact`).
-- **Box tokens**: outlines each token (adds `ling-opt-tokenbox` on each token).
-- **Center token text**: center alignment (adds `ling-opt-center` on the gloss wrapper).
+### 8.3 Boxed tokens
+- **Boxing mode**: `Off`, `On (all tokens)`, or `Auto (box multiline tokens only)`.
+- **Token gap**: spacing between tokens (em).
+- **Box padding**: vertical/horizontal padding inside boxed tokens (em).
+- **Border thickness**: border width (px).
+- **Border radius**: rounded corners (px).
 
-### 8.4 Alignment settings
+### 8.4 Formatting
+- **Compact mode**: reduces spacing between lines/tokens (adds `ling-opt-compact`).
+- **Center token text**: center alignment (adds `ling-opt-center` on the gloss wrapper).
+- **Base font scale**: scales the entire gloss block.
+- **Translation font scale**: scales the `\ft` lines.
+- **Line spacing**: line height for token stacks.
+- **Wrap behavior**: wrap tokens or keep them on a single row (horizontal scroll).
+- **Max width**: limit gloss width on large screens (rem).
+
+### 8.5 Alignment settings
 - **Align gloss elements**: none / default / custom markers.
 - **Default center alignment**: center-align tokens without markers.
 - **Gloss line for alignment**: which line to inspect (level A, B, or C).
 - **Custom alignment markers**: space-separated list.
 
-### 8.5 Default `\set` values
+### 8.6 Default `\set` values
 Set defaults for `style`, `gl*style`, `exstyle`, `ftstyle`, `srcstyle`, `glaspaces`, and `markup`.
 
 ---
@@ -313,6 +365,7 @@ Example:
 - `.ling-opt-compact` (on wrapper)
 - `.ling-opt-center` (on wrapper)
 - `.ling-opt-tokenbox` (on token)
+- `.ling-opt-nowrap` (on wrapper)
 
 ### 9.5 Built-in style overrides
 You can apply these built-in styles via `\set`:

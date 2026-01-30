@@ -13,6 +13,10 @@ export class PluginSettingsWrapper {
         this.settings = deepMerge(
             getDefaultPluginSettings(),
             await this.plugin.loadData());
+
+        if (typeof this.settings.boxTokens === "boolean") {
+            this.settings.boxTokens = this.settings.boxTokens ? "on" : "off";
+        }
     }
 
     async save(): Promise<void> {
