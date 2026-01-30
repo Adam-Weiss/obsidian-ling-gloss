@@ -1,5 +1,5 @@
 {
-	"name": "ling-gloss",
+	"name": "ling-gloss-plus",
 	"version": "2.2.0",
 	"description": "Format interlinear glosses used in linguistics texts.",
 	"main": "main.js",

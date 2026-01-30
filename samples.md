@@ -1,4 +1,4 @@
-# Interlinear Glossing Samples
+# Interlinear Glossing Plus Samples
 
 Use the samples below to verify the new features. Some samples expect specific settings (noted inline).
 

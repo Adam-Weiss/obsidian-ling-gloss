@@ -1,4 +1,4 @@
-# Obsidian Interlinear Glosses
+# Obsidian Interlinear Glossing Plus
 
 This plugin adds support for [interlinear glosses](https://en.wikipedia.org/wiki/Interlinear_gloss) often used in linguistics documents.
 It's primarily meant for members of the constructed language community that use Obsidian for documenting their conlangs.
@@ -47,7 +47,7 @@ If an additional line is needed, e.g. for the transcription, the `\glc` (gloss l
 
 ![Example 02](_examples/example02.png)
 
-## Free tranlsation (`\ft`)
+## Free translation (`\ft`)
 
 A free translation line can be added at the bottom of the gloss using the `\ft` command, which takes a line of text. By default, free translation lines are wrapped in quotation marks and have an italics style applied. Multiple `\ft` lines are supported and will render in order (either stacked line-by-line or merged into a single paragraph depending on the setting described below).
 
@@ -499,7 +499,7 @@ This is a style that's meant to select an alternative appearance for the source.
 
 ## New rendering settings
 
-The following settings are available in *Settings → Interlinear Glossing*:
+The following settings are available in *Settings → Interlinear Glossing Plus*:
 
 - **Default syntax**: choose whether `gloss` blocks use the regular syntax or the `ngloss` alternative by default.
 - **Translation rendering**: stack multiple `\ft` lines or merge them into a single paragraph.
@@ -512,7 +512,7 @@ The following settings are available in *Settings → Interlinear Glossing*:
 
 Since the version 2.0 it is possible to set the default values for any of the options listed in the previous section. These defaults will then apply to all glosses in a vault without having to repeat `\set` commands in every one of them.
 
-To configure the defaults, go to the plugin settings (*Settings → Interlinear Glossing*) menu.
+To configure the defaults, go to the plugin settings (*Settings → Interlinear Glossing Plus*) menu.
 
 ![Example 26](_examples/example26.png)
 
@@ -520,7 +520,7 @@ To configure the defaults, go to the plugin settings (*Settings → Interlinear 
 
 Since the version 2.0 there is an option to horizontally align the text in individual gloss elements towards the side that starts/ends with one of certain "marker" characters. Such characters are normally the affix and clitic boundary indicators (i.e. hyphen and equals sign), but custom characters can be configured instead. There is also a separately toggleable option to center align the elements that lack a "marker" character on either end.
 
-To configure the element alignment, go to the plugin settings (*Settings → Interlinear Glossing*) menu.
+To configure the element alignment, go to the plugin settings (*Settings → Interlinear Glossing Plus*) menu.
 
 ![Example 27](_examples/example27.png)
 
@@ -539,13 +539,23 @@ An example gloss using the above options is shown below:
 
 ## Obsidian plugin repository
 
-You can now install this plugin from the official community plugin repository by going to *Settings → Community plugins → Browse* in Obsidian and searching for “Interlinear Glossing”.
+You can now install this plugin from the official community plugin repository by going to *Settings → Community plugins → Browse* in Obsidian and searching for “Interlinear Glossing Plus”.
 
-## Manual installation (deprecated)
+## Manual installation (prebuilt release)
 
-- Create a folder called `ling-gloss` anywhere
-- Go to the ["Releases"](https://github.com/Mijyuoon/obsidian-ling-gloss/releases) page and download `main.js`, `manifest.json` and `styles.css` files from the latest version
-- Copy the files you've downloaded into the folder you've created earlier
-- Open your vault's plugins folder at `<Vault Folder>/.obsidian/plugins` and put your folder there
-- Reload the plugins in Obsidian settings or restart the program
-- Enable the "Interlinear Glossing" plugin in Obsidian settings
+- Create a folder called `ling-gloss-plus`.
+- Go to the ["Releases"](https://github.com/Mijyuoon/obsidian-ling-gloss/releases) page and download `main.js`, `manifest.json`, and `styles.css` from the latest version.
+- Copy those files into the `ling-gloss-plus` folder.
+- Move the folder into your vault at `<Vault Folder>/.obsidian/plugins/ling-gloss-plus`.
+- Reload plugins in Obsidian or restart the app.
+- Enable **Interlinear Glossing Plus** in Obsidian settings.
+
+## Manual installation (build from source)
+
+Obsidian loads JavaScript plugins. This repository is authored in TypeScript and bundled to `main.js` during the build step.
+
+1. Clone this repository.
+2. Run `npm install`.
+3. Run `npm run build` to generate `main.js`.
+4. Copy `manifest.json`, `styles.css`, and the generated `main.js` into `<Vault Folder>/.obsidian/plugins/ling-gloss-plus`.
+5. Reload plugins or restart Obsidian, then enable **Interlinear Glossing Plus**.
