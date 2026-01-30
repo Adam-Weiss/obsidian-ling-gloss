@@ -35,6 +35,7 @@ export interface IGlossNumber {
 export interface IGlossElement {
     levels: IGlossLevelCell[];
     tokenClasses: string[];
+    boxOverride: "box" | "nobox" | null;
 }
 
 export interface IGlossData {
@@ -67,6 +68,7 @@ export const getDefaultGlossOptions = (): IGlossOptions => ({
 export const createGlossElement = (): IGlossElement => ({
     levels: [],
     tokenClasses: [],
+    boxOverride: null,
 });
 
 export const createGlossLevelCell = (text = "", classes: string[] = []): IGlossLevelCell => ({

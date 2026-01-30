@@ -91,7 +91,14 @@ export class GlossParser {
 
         for (const [index, elem] of data.elements.entries()) {
             arrayFill(elem.levels, level + 1, () => createGlossLevelCell());
-            elem.levels[level] = createGlossLevelCell(params[index]?.value ?? "");
+            const tokenValue = params[index]?.value ?? "";
+            const parsed = parseBoxOverrideSuffix(tokenValue);
+
+            if (parsed.boxOverride) {
+                elem.boxOverride = parsed.boxOverride;
+            }
+
+            elem.levels[level] = createGlossLevelCell(parsed.text);
         }
     }
 
@@ -113,6 +120,9 @@ export class GlossParser {
             const tokenParsed = parseTokenClasses(tokenValue);
 
             elem.tokenClasses = tokenParsed.classes;
+            if (tokenParsed.boxOverride) {
+                elem.boxOverride = tokenParsed.boxOverride;
+            }
 
             arrayFill(elem.levels, maxLevel, () => createGlossLevelCell());
             elem.levels[0] = createGlossLevelCell(tokenParsed.text);
@@ -121,6 +131,9 @@ export class GlossParser {
                 const cellValue = tokenBits[levelIndex] ?? "";
                 const cellParsed = parseTokenClasses(cellValue);
                 elem.levels[levelIndex] = createGlossLevelCell(cellParsed.text, cellParsed.classes);
+                if (cellParsed.boxOverride) {
+                    elem.boxOverride = cellParsed.boxOverride;
+                }
             }
         }
     }
@@ -165,17 +178,51 @@ export class GlossParser {
     }
 }
 
-const parseTokenClasses = (value: string): { text: string; classes: string[] } => {
+const parseTokenClasses = (value: string): { text: string; classes: string[]; boxOverride: "box" | "nobox" | null } => {
     const match = value.match(/^(.*)\{([^}]*)\}$/);
-    if (match == null) return { text: value, classes: [] };
+    if (match == null) {
+        return { text: value, classes: [], boxOverride: null };
+    }
 
     const text = match[1];
     const classList = match[2].split(",").map(cls => cls.trim()).filter(cls => cls.length > 0);
+    const { classes, boxOverride } = extractBoxOverride(classList);
 
     return {
         text,
-        classes: sanitizeClassNames(classList),
+        classes: sanitizeClassNames(classes),
+        boxOverride,
     };
+};
+
+const parseBoxOverrideSuffix = (value: string): { text: string; boxOverride: "box" | "nobox" | null } => {
+    const match = value.match(/^(.*)\{#(no)?box\}$/i);
+    if (match == null) return { text: value, boxOverride: null };
+
+    return {
+        text: match[1],
+        boxOverride: match[2] ? "nobox" : "box",
+    };
+};
+
+const extractBoxOverride = (classes: string[]): { classes: string[]; boxOverride: "box" | "nobox" | null } => {
+    let boxOverride: "box" | "nobox" | null = null;
+    const remaining: string[] = [];
+
+    for (const cls of classes) {
+        const normalized = cls.toLowerCase();
+        if (normalized === "#box") {
+            boxOverride = "box";
+            continue;
+        }
+        if (normalized === "#nobox") {
+            boxOverride = "nobox";
+            continue;
+        }
+        remaining.push(cls);
+    }
+
+    return { classes: remaining, boxOverride };
 };
 
 const mergeClassSuffixTokens = (params: IToken[]): IToken[] => {

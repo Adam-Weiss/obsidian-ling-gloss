@@ -22,9 +22,11 @@
 
 .ling-gloss {
     width: 100%;
+    max-width: var(--ling-max-width, 100%);
     display: flex;
     margin-block-start: 1em;
     margin-block-end: 1em;
+    font-size: calc(1em * var(--ling-font-scale, 1));
 }
 
 .ling-gloss-number {
@@ -42,7 +44,8 @@
 .ling-gloss-elements {
     display: flex;
     flex-wrap: wrap;
-    gap: 1em 1em;
+    gap: var(--ling-token-gap, 1em);
+    align-items: flex-start;
 }
 
 .ling-gloss-postamble {
@@ -71,6 +74,7 @@
 
 .ling-gloss-translation {
     font-style: italic;
+    font-size: calc(1em * var(--ling-translation-scale, 1));
 }
 
 .ling-gloss-translation::before {
@@ -91,6 +95,10 @@
 
 .ling-gloss-level-a {
     font-style: italic;
+}
+
+.ling-gloss-element {
+    line-height: var(--ling-line-height, normal);
 }
 
 /* Gloss element horizontal alignment */
@@ -149,7 +157,7 @@
 }
 
 .ling-opt-compact .ling-gloss-elements {
-    gap: 0.5em 0.5em;
+    gap: var(--ling-token-gap-compact, 0.5em);
 }
 
 .ling-opt-compact .ling-gloss-postamble {
@@ -157,11 +165,48 @@
 }
 
 .ling-opt-tokenbox {
-    padding: 0.25em 0.4em;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 4px;
+    padding: var(--ling-box-padding-block, 0.25em) var(--ling-box-padding-inline, 0.4em);
+    border: var(--ling-box-border-width, 1px) solid var(--background-modifier-border);
+    border-radius: var(--ling-box-border-radius, 4px);
 }
 
 .ling-opt-center .ling-gloss-element {
     text-align: center;
+}
+
+.ling-opt-nowrap .ling-gloss-elements {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+}
+
+@media print {
+    @page {
+        size: A4;
+        margin: 15mm;
+    }
+
+    .ling-gloss {
+        max-width: 100% !important;
+        font-size: 10pt;
+        color: #000;
+    }
+
+    .ling-gloss-elements {
+        gap: 0.6em;
+    }
+
+    .ling-gloss-element {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .ling-opt-tokenbox {
+        border-color: #666;
+        border-width: max(0.6px, var(--ling-box-border-width, 1px));
+    }
+
+    .ling-gloss a {
+        color: #000;
+        text-decoration: underline;
+    }
 }

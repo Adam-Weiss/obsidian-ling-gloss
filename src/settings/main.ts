@@ -1,7 +1,7 @@
 import { PluginSettingTab, Plugin, Setting } from "obsidian";
 
 import { IGlossOptions, IGlossOptionStyles } from "src/data/gloss";
-import { GlossAlignMode, GlossDefaultSyntax, TranslationRendering } from "src/data/settings";
+import { BoxTokenMode, GlossAlignMode, GlossDefaultSyntax, TranslationRendering, WrapBehavior } from "src/data/settings";
 import { KeysOfType, sanitizeCssClasses } from "src/utils";
 
 import { makeDesc } from "./helpers";
@@ -19,7 +19,8 @@ export class PluginSettingsTab extends PluginSettingTab {
         this.addDefaultSyntaxSettings();
         this.addAlignModeSettings();
         this.addTranslationSettings();
-        this.addDesignSettings();
+        this.addBoxSettings();
+        this.addFormattingSettings();
         this.addSwitchSettings();
         this.addStyleSettings();
     }
@@ -162,11 +163,87 @@ export class PluginSettingsTab extends PluginSettingTab {
             });
     }
 
-    private addDesignSettings() {
-        const { compactMode, boxTokens, centerTokens } = this.settings.get();
+    private addBoxSettings() {
+        const {
+            boxTokens,
+            tokenGap,
+            boxPaddingBlock,
+            boxPaddingInline,
+            boxBorderWidth,
+            boxBorderRadius,
+        } = this.settings.get();
 
         new Setting(this.containerEl)
-            .setName("Design options")
+            .setName("Boxed tokens")
+            .setHeading();
+
+        new Setting(this.containerEl)
+            .setName("Boxing mode")
+            .setDesc("Set the default boxing behavior for tokens.")
+            .addDropdown(component => {
+                component
+                    .addOptions({
+                        off: "Off",
+                        on: "On (all tokens)",
+                        auto: "Auto (box multiline tokens only)",
+                    })
+                    .setValue(boxTokens)
+                    .onChange(async value => {
+                        await this.settings.update({
+                            boxTokens: value as BoxTokenMode,
+                        });
+                    });
+            });
+
+        this.addNumberSetting({
+            name: "Token gap",
+            description: "Spacing between gloss tokens (em).",
+            value: tokenGap,
+            onUpdate: value => this.settings.update({ tokenGap: value }),
+        });
+
+        this.addNumberSetting({
+            name: "Box padding (vertical)",
+            description: "Vertical padding inside boxed tokens (em).",
+            value: boxPaddingBlock,
+            onUpdate: value => this.settings.update({ boxPaddingBlock: value }),
+        });
+
+        this.addNumberSetting({
+            name: "Box padding (horizontal)",
+            description: "Horizontal padding inside boxed tokens (em).",
+            value: boxPaddingInline,
+            onUpdate: value => this.settings.update({ boxPaddingInline: value }),
+        });
+
+        this.addNumberSetting({
+            name: "Box border thickness",
+            description: "Border thickness for boxed tokens (px).",
+            value: boxBorderWidth,
+            onUpdate: value => this.settings.update({ boxBorderWidth: value }),
+        });
+
+        this.addNumberSetting({
+            name: "Box border radius",
+            description: "Border radius for boxed tokens (px).",
+            value: boxBorderRadius,
+            onUpdate: value => this.settings.update({ boxBorderRadius: value }),
+        });
+    }
+
+    private addFormattingSettings() {
+        const {
+            compactMode,
+            centerTokens,
+            baseFontScale,
+            translationFontScale,
+            lineHeight,
+            wrapBehavior,
+            maxWidth,
+        } = this.settings.get();
+
+        new Setting(this.containerEl)
+            .setName("Formatting")
             .setHeading();
 
         new Setting(this.containerEl)
@@ -183,19 +260,6 @@ export class PluginSettingsTab extends PluginSettingTab {
             });
 
         new Setting(this.containerEl)
-            .setName("Box tokens")
-            .setDesc("Add a subtle box around each token.")
-            .addToggle(component => {
-                component
-                    .setValue(boxTokens)
-                    .onChange(async value => {
-                        await this.settings.update({
-                            boxTokens: value,
-                        });
-                    });
-            });
-
-        new Setting(this.containerEl)
             .setName("Center token text")
             .setDesc("Center-align text inside each gloss token.")
             .addToggle(component => {
@@ -207,6 +271,51 @@ export class PluginSettingsTab extends PluginSettingTab {
                         });
                     });
             });
+
+        this.addNumberSetting({
+            name: "Base font scale",
+            description: "Scale the base font size for gloss blocks (1 = 100%).",
+            value: baseFontScale,
+            onUpdate: value => this.settings.update({ baseFontScale: value }),
+        });
+
+        this.addNumberSetting({
+            name: "Translation font scale",
+            description: "Scale the font size for translation lines (1 = 100%).",
+            value: translationFontScale,
+            onUpdate: value => this.settings.update({ translationFontScale: value }),
+        });
+
+        this.addNumberSetting({
+            name: "Line spacing",
+            description: "Line height for gloss tokens (0 = theme default).",
+            value: lineHeight,
+            onUpdate: value => this.settings.update({ lineHeight: value }),
+        });
+
+        new Setting(this.containerEl)
+            .setName("Wrap behavior")
+            .setDesc("Wrap tokens to the next line or keep them on a single row.")
+            .addDropdown(component => {
+                component
+                    .addOptions({
+                        wrap: "Wrap",
+                        nowrap: "No wrap (horizontal scroll)",
+                    })
+                    .setValue(wrapBehavior)
+                    .onChange(async value => {
+                        await this.settings.update({
+                            wrapBehavior: value as WrapBehavior,
+                        });
+                    });
+            });
+
+        this.addNumberSetting({
+            name: "Max width",
+            description: "Limit gloss block width on wide screens (rem, 0 = no limit).",
+            value: maxWidth,
+            onUpdate: value => this.settings.update({ maxWidth: value }),
+        });
     }
 
     private addStyleSettings() {
@@ -282,6 +391,28 @@ export class PluginSettingsTab extends PluginSettingTab {
                             }
                         });
                     });
+            });
+    }
+
+    private addNumberSetting(options: {
+        name: string;
+        description: string;
+        value: number;
+        onUpdate: (value: number) => Promise<void>;
+    }) {
+        new Setting(this.containerEl)
+            .setName(options.name)
+            .setDesc(options.description)
+            .addText(component => {
+                component
+                    .setValue(options.value.toString())
+                    .onChange(async value => {
+                        const parsed = Number.parseFloat(value);
+                        if (Number.isNaN(parsed)) return;
+                        await options.onUpdate(parsed);
+                    });
+
+                component.inputEl.addClass("ling-gloss-settings-wide");
             });
     }
 }
