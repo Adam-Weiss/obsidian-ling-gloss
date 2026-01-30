@@ -79,8 +79,8 @@ Use a fenced code block with the `gloss` tag:
 ````
 ```gloss
 # Comments start with # and are ignored
-\gla tok-en
-\glb gloss-TAG
+\gla word-s
+\glb word-PL
 ```
 ````
 
@@ -131,7 +131,7 @@ Use `ngloss` blocks when you want a token to be followed by its gloss(es) inline
 **Example (German):**
 
 ```ngloss
-\gl der [DEF.M] Hund [dog] schläf-t [sleep-PRS.3SG]
+\gl der [DEF.M] Hund [dog] schlaf-t [sleep-PRS.3SG]
 \ft The dog sleeps.
 ```
 
@@ -149,8 +149,8 @@ You can set **Default syntax** to `ngloss`, which makes `gloss` blocks behave as
 
 | Command | Purpose | Example |
 |---|---|---|
-| `\gla` | Level A (source text) | `\gla tok-en` |
-| `\glb` | Level B (gloss) | `\glb gloss-TAG` |
+| `\gla` | Level A (source text) | `\gla word-s` |
+| `\glb` | Level B (gloss) | `\glb word-PL` |
 | `\glc` | Level C (optional) | `\glc phonetic` |
 | `\gl` | N-level inline syntax (ngloss only) | `\gl tok [gloss] [tag]` |
 
@@ -184,7 +184,7 @@ You can set **Default syntax** to `ngloss`, which makes `gloss` blocks behave as
 ```gloss
 \set glaspaces
 \ex Кошка спит.
-\gla koška_spi-t
+\gla koshka_spi-t
 \glb cat sleep-PRS.3SG
 \ft The cat sleeps.
 ```
