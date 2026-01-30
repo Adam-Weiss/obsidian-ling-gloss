@@ -1,561 +1,371 @@
 # Obsidian Interlinear Glossing Plus
 
-This plugin adds support for [interlinear glosses](https://en.wikipedia.org/wiki/Interlinear_gloss) often used in linguistics documents.
-It's primarily meant for members of the constructed language community that use Obsidian for documenting their conlangs.
+Interlinear Glossing Plus is an Obsidian plugin for writing interlinear glosses with reliable alignment, configurable styling, and a safe subset of inline markup. The plugin preserves the existing alignment behavior while adding optional features like default `ngloss` syntax, multiple translations, per-token classes, and minimal inline link/footnote parsing.
 
-# Usage
+> **Image placeholder:** Add a screenshot of a basic gloss rendered in Obsidian.
 
-Glosses are written using code blocks with a `gloss` tag, like this:
+---
+
+## 1) Feature & Settings Overview (quick review)
+
+### Core glossing features
+- **Standard gloss blocks** with `\gla`, `\glb`, `\glc` levels. 
+- **Alternate `ngloss` syntax** via `\gl`, with arbitrary additional levels.
+- **Alignment behavior** preserved (same DOM structure and alignment logic as before).
+- **Multiple `\ft` translations** with stacked or paragraph rendering.
+- **Per-token and per-cell class hooks** (ngloss only): `{class1,class2}`.
+- **Safe inline links/footnote refs** in Level A, `\ex`, and `\ft` only.
+- **Per-gloss options** via `\set` and `\set*`.
+
+### Plugin settings
+- **Default syntax** (`gloss` or `ngloss`).
+- **Translation rendering** (`Stacked lines` or `Paragraph`).
+- **Inline links/footnote refs** (toggle).
+- **Compact mode** (reduced spacing).
+- **Box tokens** (subtle borders).
+- **Center token text** (align centers).
+- **Alignment mode** (none / default markers / custom markers), **align level**, **center fallback**.
+- **Default `\set` options** (global styles, per-level styles, etc.).
+
+---
+
+## 2) Recommended README structure
+
+If you are reorganizing this documentation, a clear user-focused structure is:
+1. **Overview & quick start** (1–2 examples).
+2. **Gloss syntax guide** (regular `gloss` and `ngloss`).
+3. **Commands & options** (`\gla`, `\glb`, `\glc`, `\gl`, `\ex`, `\ft`, `\src`, `\lbl`, `\num`, `\set`).
+4. **Inline markup rules** (safe subset only).
+5. **Settings reference** (what each toggle does).
+6. **CSS customization** (DOM classes, hooks, and snippet examples).
+7. **Installation** (community + manual).
+
+The rest of this README follows that structure.
+
+---
+
+## 3) Quick start
+
+### Basic gloss (English)
+
+```gloss
+\gla the cat sleep-s
+\glb DEF cat sleep-PRS.3SG
+\ft The cat sleeps.
+```
+
+> **Image placeholder:** Basic English gloss example.
+
+### Gloss with `\ex` and multiple `\ft` (Spanish)
+
+```gloss
+\ex El gato duerme.
+\gla el gato dormir-e
+\glb DEF cat sleep-PRS.3SG
+\ft The cat sleeps.
+\ft It is resting now.
+```
+
+> **Image placeholder:** Spanish example with two translations.
+
+---
+
+## 4) Gloss syntax guide
+
+### 4.1 Regular syntax (`gloss` blocks)
+
+Use a fenced code block with the `gloss` tag:
 
 ````
 ```gloss
-# This is an interlinear gloss block
+# Comments start with # and are ignored
+\gla word-s
+\glb word-PL
 ```
 ````
 
-Lines starting with `#` are consired as comments and are ignored by the parser. Blank lines and lines consisting only of whitespace are ignored as well.
+**Command summary (regular syntax):**
+- `\gla` — level A (source language)
+- `\glb` — level B (gloss)
+- `\glc` — level C (optional extra line, e.g., transcription)
+- `\ex` — preamble/source line (shown above)
+- `\ft` — free translation line(s)
+- `\src` — source/attribution
+- `\lbl` — label (language name or header)
+- `\num` — numbering label
 
-## Basic gloss lines (`\gla`, `\glb`)
+**Token rules:**
+- Tokens are separated by spaces.
+- Bracketed `[tokens with spaces]` are treated as a single token.
+- To output literal `[` or `]`, escape with `^` as `^[` or `^]`.
+- Empty `[]` is allowed to force a blank token.
 
-A basic gloss consists of two lines, the source language text and the metalanguage. This can be achieved using `\gla` (gloss level A) and `\glb` (gloss level B) commands. These commands take space-separated lists of elements (words or morphemes), which will be aligned vertically element-by-element. By default level A lines have an italics style applied, while level B lines have no default style.
-
-```gloss
-\gla Péter-nek van egy macská-ja
-\glb Peter-DAT exist INDEF cat-POSS.3SG
-```
-
-![Example 01a](_examples/example01a.png)
-
-Additionally, if there's a need to use whitespace within a single gloss element, it can be wrapped in square brackets `[like this]`. To use the brackets verbatim in a gloss element, they can be "escaped" by prefixing with a caret symbol like `^[this^]`. Empty square brackets `[]` can be used to write a blank element in a gloss.
-
-```gloss
-\gla János tegnap [vi-tt el] két könyv-et Péter-nek
-\glb John^[TOP^] yesterday^[FOC^] [take-PST away] two book-ACC Peter-DAT
-```
-
-![Example 01b](_examples/example01b.png)
-
-## Additional gloss line (`\glc`)
-
-If an additional line is needed, e.g. for the transcription, the `\glc` (gloss level C) command can be used, which functions just like `\gla` and `\glb` commands. Level C lines have no default style, just like level B.
+**Line wrapping:**
+You can indent a line to continue the previous command.
 
 ```gloss
-\gla Péter-nek van egy macská-ja
-\glb pe:tɛrnɛk vɒn ɛɟ mɒt͡ʃka:jɒ
-\glc Peter-DAT exist INDEF cat-POSS.3SG
+\gla the cat
+    sleep-s
+\glb DEF cat
+    sleep-PRS.3SG
+\ft The cat sleeps.
 ```
 
-![Example 02](_examples/example02.png)
+> **Image placeholder:** Example showing wrapped lines.
 
-## Free translation (`\ft`)
+### 4.2 Alternate syntax (`ngloss` blocks)
 
-A free translation line can be added at the bottom of the gloss using the `\ft` command, which takes a line of text. By default, free translation lines are wrapped in quotation marks and have an italics style applied. Multiple `\ft` lines are supported and will render in order (either stacked line-by-line or merged into a single paragraph depending on the setting described below).
+Use `ngloss` blocks when you want a token to be followed by its gloss(es) inline:
+
+````
+```ngloss
+\gl token [gloss]
+```
+````
+
+**How it parses:**
+- A bare `token` starts a new level A element.
+- A following `[gloss]` is level B for that element.
+- Additional bracketed `[gloss]` tokens create levels C, D, etc.
+
+**Example (German):**
+
+```ngloss
+\gl der [DEF.M] Hund [dog] schlaf-t [sleep-PRS.3SG]
+\ft The dog sleeps.
+```
+
+> **Image placeholder:** German ngloss example.
+
+### 4.3 Default syntax setting
+
+You can set **Default syntax** to `ngloss`, which makes `gloss` blocks behave as if they were `ngloss` blocks. Existing `ngloss` blocks always work.
+
+---
+
+## 5) Command reference
+
+### 5.1 Gloss line commands
+
+| Command | Purpose | Example |
+|---|---|---|
+| `\gla` | Level A (source text) | `\gla word-s` |
+| `\glb` | Level B (gloss) | `\glb word-PL` |
+| `\glc` | Level C (optional) | `\glc phonetic` |
+| `\gl` | N-level inline syntax (ngloss only) | `\gl tok [gloss] [tag]` |
+
+### 5.2 Preamble & postamble
+
+| Command | Purpose | Example |
+|---|---|---|
+| `\ex` | Preamble/source text | `\ex A longer source sentence.` |
+| `\ft` | Free translation (multiple lines supported) | `\ft Translation text.` |
+| `\src` | Source or citation | `\src Author, 2024.` |
+| `\lbl` | Label (language or header) | `\lbl Tibetan` |
+| `\num` | Numbering | `\num 1` |
+
+### 5.3 Per-gloss options with `\set` / `\set*`
+
+`\set` modifies options for the current gloss only:
+
+- `\set OPTION` for boolean flags
+- `\set OPTION value` for single values
+- `\set OPTION value1 value2` for list values
+
+`\set*` resets default lists or disables flags instead of appending.
+
+**Available options:**
+- `glaspaces` — treat underscores as spaces in level A.
+- `markup` — enable safe inline parsing (`[[wiki]]`, `[^footnote]`) in `\ex`, level A, and `\ft`.
+- `style`, `glastyle`, `glbstyle`, `glcstyle`, `glxstyle`, `exstyle`, `ftstyle`, `srcstyle` — style class lists.
+
+**Example (Russian):**
 
 ```gloss
-\gla Péter-nek van egy macská-ja
-\glb pe:tɛrnɛk vɒn ɛɟ mɒt͡ʃka:jɒ
-\glc Peter-DAT exist INDEF cat-POSS.3SG
-\ft Peter has a cat.
-\ft It is sitting on the rug.
+\set glaspaces
+\ex Кошка спит.
+\gla koshka_spi-t
+\glb cat sleep-PRS.3SG
+\ft The cat sleeps.
 ```
 
-![Example 03](_examples/example03.png)
+---
 
-## Source text (`\ex`)
+## 6) Inline markup rules (safe subset only)
 
-An original source text line can be assed above the gloss using the `\ex` command, which takes a line of text like the `\ft` command. By default, original text lines have a bold style applied.
+Inline parsing is **off by default per gloss**, but can be enabled globally in settings or per-gloss via `\set markup`.
 
-```gloss
-\ex Péternek van egy macskája.
-\gla Péter-nek van egy macská-ja
-\glb pe:tɛrnɛk vɒn ɛɟ mɒt͡ʃka:jɒ
-\glc Peter-DAT exist INDEF cat-POSS.3SG
-\ft Peter has a cat.
-```
-
-![Example 04](_examples/example04.png)
-
-## Line breaks
-
-If a command line feels too long, it may be broken into multiple lines by indenting the subsequent lines. Additionally, blank lines are ignored and can be used to separate commands that span multiple lines. The following two examples produce the same result, shown below:
-
-```gloss
-\ex János tegnap elvitt két könyvet Péternek.
-\gla János tegnap elvi-tt két könyv-et Péter-nek.
-\glb John:NOM yesterday take-PST two book-ACC Peter-DAT
-\ft John took two books to Peter yesterday.
-```
-
-```gloss
-\ex János tegnap elvitt két könyvet Péternek.
-
-\gla János tegnap
-    elvi-tt két
-    könyv-et Péter-nek.
-
-\glb John:NOM yesterday
-    take-PST two
-    book-ACC Peter-DAT
-
-\ft John took two books to Peter yesterday.
-```
-
-![Example 05](_examples/example05.png)
-
-## Numbering (`\num`)
-
-A gloss can be numbered using the `\num` command for the purpose of referencing it from the rest of the document. Currently, this command takes a line of text that is directly used as the label for the gloss. This may be replaced with an auto-numbering system in the future.
-
-```gloss
-\num 1
-\gla Péter-nek van egy macská-ja
-\glb Peter-DAT exist INDEF cat-POSS.3SG
-```
-
-```gloss
-\num 2
-\gla [nǐ hǎo] [shì jiè]
-\glb hello world
-```
-
-![Example 16](_examples/example16.png)
-
-## Additional label (`\lbl`)
-
-An additional label can be added at the top of a gloss using the `\lbl` command, usually for the purpose of specifying the language that's being shown. This command takes a single line of text.
-
-```gloss
-\num 1
-\lbl Hungarian
-\gla Péter-nek van egy macská-ja
-\glb Peter-DAT exist INDEF cat-POSS.3SG
-```
-
-```gloss
-\num 2
-\lbl Mandarin Chinese
-\gla [nǐ hǎo] [shì jiè]
-\glb hello world
-```
-
-![Example 17](_examples/example17.png)
-
-## Text source (`\src`)
-
-A source for the text in a gloss can be specified using the `\src` command, which takes a single line of text. By default, the source is shown directly after the free translation.
-
-```gloss
-\ex János tegnap elvitt két könyvet Péternek.
-\gla János tegnap elvi-tt két könyv-et Péter-nek.
-\glb John:NOM yesterday take-PST two book-ACC Peter-DAT
-\ft John took two books to Peter yesterday.
-\src Wikipedia – Hungarian Grammar; 2024
-```
-
-![Example 18](_examples/example18.png)
-
-## Inline links and footnote references
-
-The plugin supports a safe subset of inline markup in three places only:
-
-- Level A (source language) tokens
-- The preamble line (`\ex`)
-- Free translation lines (`\ft`)
-
-Supported inline forms:
-
+**Supported (only):**
 - Obsidian wiki links: `[[target]]` and `[[target|label]]`
-- Footnote references: `[^id]` (rendered as a superscript reference, not a full footnote)
+- Footnote refs: `[^id]` (rendered as superscript text, not full footnotes)
 
-Inline parsing can be toggled via the **Inline links/footnote refs** setting. This is a safe, limited parser and does not enable general Markdown-in-token.
+**Enabled in:**
+- Level A tokens
+- `\ex` preamble line
+- `\ft` translation lines
 
-## Alternative syntax (`\gl`)
+**Example (English + wiki links):**
 
-An alternative syntax for gloss lines is available, where source language elements are adjacent to their glosses in the markup. This has an advantage of making the markup easier to read and write, especially for longer glosses.
-
-To use this syntax, a code block with `ngloss` tag is used, instead of the regular `gloss` tag as seen earlier. You can also change the **Default syntax** setting so that ```gloss``` blocks are parsed as `ngloss` without changing your notes.
-
-````
-```ngloss
-# This gloss will use the alternative syntax
-```
-````
-
-In this mode, commands for individual gloss lines (`\gla`, `\glb`, `\glc`) are replaced with the single `\gl` command. This command accepts a space-separated list of tokens that are interpreted as follows:
-
-- A regular bare `token` is always treated as a new level A (1st line) element
-- A `[token]` surrounded in square brackets that follows a regular `token` is a level B (2nd line) element, that corresponds to the last level A element
-- Any additional bracketed `[token]`s add further lines to the last level A element
-	- Note that this mechanism allows for adding more than 3 gloss lines, as shown below
-
-```ngloss
-\gl János [ja:noʃ] [John:NOM]
-	tegnap [tɛgnɒp] [yesterday]
-	elvi-tt [ɛlvit:] [take-PST]
-	két [ke:t] [two]
-	könyv-et [køɲvɛt] [book-ACC]
-	Péter-nek [pe:tɛrnɛk] [Peter-DAT]
+```gloss
+\set markup
+\ex [[Example Source|Example]] text.[^a]
+\gla the [[cat]] sleep-s
+\glb DEF cat sleep-PRS.3SG
+\ft See [[Glossary]].[^1]
 ```
 
-![Example 06a](_examples/example06a.png)
+---
 
-```ngloss
-\set glastyle cjk
-\ex 牆上掛著一幅畫 / 墙上挂着一幅画
-\gl 牆 [墙] [qiáng] [wall] [^[TOP]
-	上 [上] [shàng] [on] [^]]
-	掛 [挂] [guà] [hang] [V]
-	著 [着] [zhe] [CONT] [ASP]
-	一 [一] [yì] [one] [^[S]
-	幅 [幅] [fú] [picture.CL] []
-	畫 [画] [huà] [picture] [^]]
-\ft A picture is hanging on the wall.
-```
+## 7) Token and cell classes (ngloss only)
 
-![Example 06b](_examples/example06b.png)
+In `ngloss`, you can attach class hooks to tokens or bracketed cells:
 
-### Per-token and per-cell class hooks (ngloss only)
+- `TOKEN{class1,class2}` → applied to the token wrapper (e.g., `ling-tok-class1`).
+- `[CELL]{class1,class2}` → applied to the gloss cell (e.g., `ling-cell-class1`).
 
-In `ngloss` mode, you can add class hooks to tokens or individual gloss cells by appending a class block in curly braces:
-
-- `TOKEN{class1,class2}` applies classes to the token wrapper (rendered as `ling-tok-<class>`).
-- `[CELL]{class1,class2}` applies classes to the specific level cell (rendered as `ling-cell-<class>`).
+**Example (Tibetan):**
 
 ```ngloss
 \gl སེམས་ཅན{agent,noun} [SENTIENT]{sem} [N]
 \gl བྱེད{verb} [do] [V]{pos-verb}
+\ft “Sentient beings do.”
 ```
 
-While it is generally cleaner to write each element on its own line, as in the example above, it is not strictly necessary and all tokens can be placed on the line following the `\gl` command for the same result. Additionally, spaces between bracketed `[tokens]` are not required, unlike between bare tokens. (Spaces within `[tokens]` work the same way as in the other syntax.)
+Class names are sanitized to `[a-zA-Z0-9_-]` and prefixed for safety.
 
-The following example produces the same result as the one above, although the readability is generally worse:
+---
 
-```ngloss
-\gl János[ja:noʃ][John:NOM]  tegnap[tɛgnɒp][yesterday]  elvi-tt[ɛlvit:][take-PST]  két[ke:t][two]  könyv-et[køɲvɛt][book-ACC]  Péter-nek[pe:tɛrnɛk][Peter-DAT]
-```
+## 8) Settings reference
 
-## Custom styles
+Open **Settings → Interlinear Glossing Plus**.
 
-All parts of a rendered gloss block have CSS classes assigned, so their appearance can be customized using [CSS snippets](https://help.obsidian.md/Extending+Obsidian/CSS+snippets). Below is the list of available CSS classes with examples.
+### 8.1 Syntax & translation
+- **Default syntax**: `gloss` or `ngloss`.
+- **Translation rendering**: `Stacked lines` (each `\ft` line is separate) or `Paragraph` (joined with spaces).
 
-### `.ling-gloss-body`
+### 8.2 Inline parsing
+- **Inline links/footnote refs**: toggle safe inline parsing in level A, `\ex`, and `\ft`.
 
-This class represents the contents of a gloss block as a whole.
+### 8.3 Design toggles
+- **Compact mode**: reduces spacing between lines/tokens (adds `ling-opt-compact`).
+- **Box tokens**: outlines each token (adds `ling-opt-tokenbox` on each token).
+- **Center token text**: center alignment (adds `ling-opt-center` on the gloss wrapper).
+
+### 8.4 Alignment settings
+- **Align gloss elements**: none / default / custom markers.
+- **Default center alignment**: center-align tokens without markers.
+- **Gloss line for alignment**: which line to inspect (level A, B, or C).
+- **Custom alignment markers**: space-separated list.
+
+### 8.5 Default `\set` values
+Set defaults for `style`, `gl*style`, `exstyle`, `ftstyle`, `srcstyle`, `glaspaces`, and `markup`.
+
+---
+
+## 9) CSS customization
+
+### 9.1 Structural classes
+These classes are always present and can be targeted in snippets:
+
+- `.ling-gloss` — wrapper
+- `.ling-gloss-number` — number (`\num`)
+- `.ling-gloss-label` — label (`\lbl`)
+- `.ling-gloss-body` — content wrapper
+- `.ling-gloss-elements` — aligned grid container
+- `.ling-gloss-element` — a token group
+- `.ling-gloss-level-a`, `.ling-gloss-level-b`, `.ling-gloss-level-c`, `.ling-gloss-level-x`
+- `.ling-gloss-preamble` — `\ex`
+- `.ling-gloss-translation` — `\ft`
+- `.ling-gloss-source` — `\src`
+
+> **Image placeholder:** CSS class diagram screenshot.
+
+### 9.2 Style class hooks (`\set *style`)
+`\set` options attach user classes as `.ling-style-<class>`.
+
+Example:
 
 ```css
-.ling-gloss-body { border: solid 2px red; }
+.ling-style-big { font-size: 1.2em; }
+.ling-style-muted { color: var(--text-muted); }
 ```
-
-![Example 07](_examples/example07.png)
-
-### `.ling-gloss-elements`
-
-This class represents the sub-block containing the gloss lines with the vertically aligned elements.
-
-```css
-.ling-gloss-elements { border: solid 2px red; }
-```
-
-![Example 08](_examples/example08.png)
-
-### `.ling-gloss-preamble`
-
-This class represents the unmodified source text (preamble) line.
-
-```css
-.ling-gloss-preamble { border: solid 2px red; }
-```
-
-![Example 09](_examples/example09.png)
-
-### `.ling-gloss-postamble`
-
-This class represents the free translation and source (postamble) line.
-
-```css
-.ling-gloss-postamble { border: solid 2px red; }
-```
-
-![Example 10](_examples/example10.png)
-
-### `.ling-gloss-translation`
-
-This class represents the free translation part of the postamble line.
-
-```css
-.ling-gloss-translation { border: solid 2px red; }
-```
-
-![Example 19](_examples/example19.png)
-
-### `.ling-gloss-source`
-
-This class represents the source part of the postamble line.
-
-```css
-.ling-gloss-source { border: solid 2px red; }
-```
-
-![Example 20](_examples/example20.png)
-
-### `.ling-gloss-element`
-
-This class represents a single group of vertically aligned gloss elements.
-
-```css
-.ling-gloss-element { border: solid 2px red; }
-```
-
-![Example 11](_examples/example11.png)
-
-### `.ling-gloss-level-*`
-
-These classes represent an element on a specific gloss line, where `*` is one of the lowercase letters `a`, `b`, `c` or `x`, that corresponds to the level of that line.
-
-```css
-.ling-gloss-level-a { border: dotted 2px red; }
-.ling-gloss-level-b { border: dashed 2px yellowgreen; }
-.ling-gloss-level-c { border: solid 2px blueviolet; }
-```
-
-![Example 12a](_examples/example12a.png)
-
-Note that the `level-x` style applies to *all* lines after the level C line, however, the CSS sibling selector `:nth-child(n)` can be used to target a specific line. The `n` count for level X lines starts from 4, since the first three lines are the levels A, B and C.
-
-```css
-.ling-gloss-level-x { border: solid 2px red; }
-.ling-gloss-level-x:nth-child(5) { font-size: 1.5em; }
-```
-
-```ngloss
-\set glastyle cjk
-\ex 牆上掛著一幅畫 / 墙上挂着一幅画
-\gl 牆 [墙] [qiáng] [wall] [^[TOP]
-	上 [上] [shàng] [on] [^]]
-	掛 [挂] [guà] [hang] [V]
-	著 [着] [zhe] [CONT] [ASP]
-	一 [一] [yì] [one] [^[S]
-	幅 [幅] [fú] [picture.CL] []
-	畫 [画] [huà] [picture] [^]]
-\ft A picture is hanging on the wall.
-```
-
-![Example 12b](_examples/example12b.png)
-
-### `.ling-gloss-number`
-
-This class represent the number on the left of a gloss block.
-
-```css
-.ling-gloss-number { border: solid 2px red; }
-```
-
-![Example 21](_examples/example21.png)
-
-### `.ling-gloss-label`
-
-This class represents the additional label shown at the start of a gloss.
-
-```css
-.ling-gloss-label { border: solid 2px red; }
-```
-
-![Example 22](_examples/example22.png)
-
-## Setting Options (`\set`, `\set*`)
-
-There are some options that can be changed for an individual gloss block using the `\set` command, which takes an option name and, depending on the command:
-
-- No values (for binary switch options)
-- A single value (multiple spaces between value tokens are collapsed into a single one)
-- A list of values (bracketed `[tokens]` can be used for values with spaces in them)
-
-The `\set*` command is a special variant of the regular `\set` command which is mainly intended for overriding default options that have been configured in the plugin settings. The way its behavior differs depends on the number of values that a given command takes:
-
-- For no values – unsets the binary switch, instead of setting it.
-- For a single value – no differences from the `\set` command.
-- For a list of values – removes the default values from the list, instead of appending to them.
-
-Below is the list of available options with examples.
-
-### `glaspaces`
-
-This option enables using underscore characters for whitespace in level A elements. It's particularly useful for `ngloss` syntax as bracketed tokens that support whitespace can't be used in level A. This option takes no values.
-
-```ngloss
-\set glaspaces
-\gl nǐ_hǎo [hello]
-    shì_jiè [world]
-```
-
-![Example 13](_examples/example13.png)
-
-### `markup`
-
-This option enables the safe inline parser for wiki links (`[[target]]`, `[[target|label]]`) and footnote references (`[^id]`) in the preamble (`\ex`), the level A line, and the free translation (`\ft`). This option takes no values.
-
-### `style`, `gl*style`, `exstyle`, `ftstyle`, `srcstyle`
-
-These options assign custom CSS classes to various parts of a rendered gloss to allow for selective customization of individual glosses. All these options accept a list of CSS class names as values. Each command targets a specific part of a gloss as follows:
-
-- `style` – Targets the the gloss contents as a whole. Useful for styles that target multiple parts of a gloss at once.
-- `gl*style` – Targets an element on a specific gloss line, where `*` is one of the lowercase letters `a`, `b`, `c` or `x`, that corresponds to the level of that line.
-	- Note that `glxstyle` applies to *all* lines after the level C line. See [`.ling-gloss-level-*`](#ling-gloss-level) for details.
-- `exstyle` – Targets the unmodified source text (preamble) line.
-- `ftstyle` – Targets the free translation part of the postamble line.
-- `srcstyle` – Targets the source part of the postamble line.
-
-For each provided class name, a CSS class called `.ling-style-*` is assigned to the target, where `*` is the provided class name.
-
-For example, assuming these styles defined in a CSS snippet:
-```css
-.ling-style-big { font-size: 1.5em; }
-.ling-style-solid { border: solid 2px red; }
-.ling-style-dashed { border: dashed 2px yellowgreen; }
-```
-
-The following gloss should be displayed as shown here:
-
-```ngloss
-\set glastyle big solid
-\set ftstyle dashed
-\gl János [ja:noʃ] [John:NOM]
-    tegnap [tɛgnɒp] [yesterday]
-    elvi-tt [ɛlvit:] [take-PST]
-    két [ke:t] [two]
-    könyv-et [køɲvɛt] [book-ACC]
-    Péter-nek [pe:tɛrnɛk] [Peter-DAT]
-\ft John took two books to Peter yesterday.
-```
-
-![Example 14](_examples/example14.png)
-
-## Predefined style overrides
-
-By default, the plugin defines several useful style overrides for use with the `*style` options described earlier. These overrides are described below.
-
-### `cjk` (for `glastyle`)
-This is a style that removes the default italics styling. This is meant to be used with CJK characters which do not normally use italics:
-
-```ngloss
-\set glastyle cjk
-\gl 你好 [nǐhǎo] [hello]
-	世界 [shìjiè] [world]
-```
-
-![Example 15a](_examples/example15a.png)
-
-And the same gloss with the `\set` line removed:
-
-![Example 15b](_examples/example15b.png)
-
-### `right` (for `srcstyle`)
-
-This is a style that right-aligns the source instead of putting it directly after the free translation:
-
-```ngloss
-\set srcstyle right
-\gl Péter-nek[Peter-DAT]
-	van[exist]
-	egy[INDEF]
-	macská-ja[cat-POSS.3SG]
-\ft Peter has a cat.
-\src The author of this document; 2024
-```
-
-![Example 23](_examples/example23.png)
-
-### `line` (for `srcstyle`)
-
-This is a style that places the source on a new line instead of putting it directly after the free translation:
-
-```ngloss
-\set srcstyle line
-\gl Péter-nek[Peter-DAT]
-	van[exist]
-	egy[INDEF]
-	macská-ja[cat-POSS.3SG]
-\ft Peter has a cat.
-\src The author of this document; 2024
-```
-
-![Example 24](_examples/example24.png)
-
-### `alt` (for `srcstyle`)
-
-This is a style that's meant to select an alternative appearance for the source. Currently, it changes the round brackes to the square ones.
-
-```ngloss
-\set srcstyle alt
-\gl Péter-nek[Peter-DAT]
-	van[exist]
-	egy[INDEF]
-	macská-ja[cat-POSS.3SG]
-\ft Peter has a cat.
-\src The author of this document; 2024
-```
-
-![Example 25](_examples/example25.png)
-
-## New rendering settings
-
-The following settings are available in *Settings → Interlinear Glossing Plus*:
-
-- **Default syntax**: choose whether `gloss` blocks use the regular syntax or the `ngloss` alternative by default.
-- **Translation rendering**: stack multiple `\ft` lines or merge them into a single paragraph.
-- **Inline links/footnote refs**: toggle the safe inline parser for Level A, `\ex`, and `\ft`.
-- **Compact mode**: reduce spacing between gloss lines and tokens.
-- **Box tokens**: add a subtle border around each token.
-- **Center token text**: center-align text inside each token.
-
-## Option Defaults
-
-Since the version 2.0 it is possible to set the default values for any of the options listed in the previous section. These defaults will then apply to all glosses in a vault without having to repeat `\set` commands in every one of them.
-
-To configure the defaults, go to the plugin settings (*Settings → Interlinear Glossing Plus*) menu.
-
-![Example 26](_examples/example26.png)
-
-## Gloss Element Aligning
-
-Since the version 2.0 there is an option to horizontally align the text in individual gloss elements towards the side that starts/ends with one of certain "marker" characters. Such characters are normally the affix and clitic boundary indicators (i.e. hyphen and equals sign), but custom characters can be configured instead. There is also a separately toggleable option to center align the elements that lack a "marker" character on either end.
-
-To configure the element alignment, go to the plugin settings (*Settings → Interlinear Glossing Plus*) menu.
-
-![Example 27](_examples/example27.png)
-
-An example gloss using the above options is shown below:
 
 ```gloss
-\ex imadu avelamo sobala de putri keraka.
-\gla ima -du a- vela -mo soba -la de putri kera -ka
-\glb 1 -EXP POSS- house -PTV near -LOC DEF.SG person see -PFV
-\ft I saw a (certain) person near my house.
+\set glastyle big
+\set ftstyle muted
+\gla the cat sleep-s
+\glb DEF cat sleep-PRS.3SG
+\ft The cat sleeps.
 ```
 
-![Example 28](_examples/example28.png)
+### 9.3 Token & cell hooks (ngloss)
+- Token classes: `.ling-tok-<class>`
+- Cell classes: `.ling-cell-<class>`
 
-# Installation
+Example:
 
-## Obsidian plugin repository
+```css
+.ling-tok-agent { background: var(--background-secondary); }
+.ling-cell-pos-verb { font-weight: 600; }
+```
 
-You can now install this plugin from the official community plugin repository by going to *Settings → Community plugins → Browse* in Obsidian and searching for “Interlinear Glossing Plus”.
+### 9.4 Design option classes
+- `.ling-opt-compact` (on wrapper)
+- `.ling-opt-center` (on wrapper)
+- `.ling-opt-tokenbox` (on token)
 
-## Manual installation (prebuilt release)
+### 9.5 Built-in style overrides
+You can apply these built-in styles via `\set`:
 
-- Create a folder called `ling-gloss-plus`.
-- Go to the ["Releases"](https://github.com/Mijyuoon/obsidian-ling-gloss/releases) page and download `main.js`, `manifest.json`, and `styles.css` from the latest version.
-- Copy those files into the `ling-gloss-plus` folder.
-- Move the folder into your vault at `<Vault Folder>/.obsidian/plugins/ling-gloss-plus`.
-- Reload plugins in Obsidian or restart the app.
-- Enable **Interlinear Glossing Plus** in Obsidian settings.
+- `glastyle cjk` — removes italics for CJK characters.
+- `srcstyle right` — right-aligns the source.
+- `srcstyle line` — places source on a new line.
+- `srcstyle alt` — uses square brackets for source.
 
-## Manual installation (build from source)
+---
 
-Obsidian loads JavaScript plugins. This repository is authored in TypeScript and bundled to `main.js` during the build step.
+## 10) Installation
 
-1. Clone this repository.
+### 10.1 Community plugins
+Install via **Settings → Community plugins → Browse** and search for **Interlinear Glossing Plus**.
+
+### 10.2 Manual install (prebuilt release)
+1. Create a folder named `ling-gloss-plus`.
+2. Download `main.js`, `manifest.json`, and `styles.css` from the latest release.
+3. Copy them into `<Vault Folder>/.obsidian/plugins/ling-gloss-plus`.
+4. Reload plugins or restart Obsidian.
+5. Enable **Interlinear Glossing Plus**.
+
+### 10.3 Manual install (build from source)
+1. Clone this repo.
 2. Run `npm install`.
 3. Run `npm run build` to generate `main.js`.
-4. Copy `manifest.json`, `styles.css`, and the generated `main.js` into `<Vault Folder>/.obsidian/plugins/ling-gloss-plus`.
-5. Reload plugins or restart Obsidian, then enable **Interlinear Glossing Plus**.
+4. Copy `manifest.json`, `styles.css`, and `main.js` into `<Vault Folder>/.obsidian/plugins/ling-gloss-plus`.
+5. Reload plugins or restart Obsidian.
+
+---
+
+## 11) Additional examples (allowed languages)
+
+### Hebrew
+```gloss
+\gla ha-kelev yašen
+\glb DEF-dog sleep.PRS
+\ft The dog sleeps.
+```
+
+### Dutch
+```gloss
+\gla de kat slaap-t
+\glb DEF cat sleep-PRS.3SG
+\ft The cat sleeps.
+```
+
+### Russian
+```gloss
+\gla kot spi-t
+\glb cat sleep-PRS.3SG
+\ft The cat sleeps.
+```
+
+> **Image placeholder:** Add a multi-language comparison screenshot.

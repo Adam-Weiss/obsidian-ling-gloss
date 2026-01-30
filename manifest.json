@@ -1,7 +1,7 @@
 {
 	"id": "ling-gloss-plus",
 	"name": "Interlinear Glossing Plus",
-	"version": "2.2.0",
+	"version": "2.2.1",
 	"minAppVersion": "0.15.0",
 	"description": "Format interlinear glosses used in linguistics texts.",
 	"author": "Mijyuoon",
