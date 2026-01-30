@@ -1,7 +1,7 @@
-import { IGlossData, IGlossOptions, createGlossData, createGlossElement } from "src/data/gloss";
+import { IGlossData, IGlossOptions, createGlossData, createGlossElement, createGlossLevelCell } from "src/data/gloss";
 import { IToken, ICommand, CommandTable, SetOptionTable } from "src/data/parser";
 import { PluginSettingsWrapper } from "src/settings/wrapper";
-import { Result, resultOk, resultErr, arrayFill, TObject } from "src/utils";
+import { Result, resultOk, resultErr, arrayFill, TObject, sanitizeClassNames } from "src/utils";
 
 import { paramsJoin, paramsOne, checkNoValues, checkMultiValues, checkAnyValues, checkValueSimple, checkAssertion, gatherValuesQuoted, updateObjectField } from "./helpers";
 import { tokenize } from "./tokenize";
@@ -11,7 +11,7 @@ export class GlossParser {
     private commandTable: CommandTable<IGlossData> = {
         // Simple string value commands
         ex: (data, params, _) => data.preamble = paramsJoin(params),
-        ft: (data, params, _) => data.translation = paramsJoin(params),
+        ft: (data, params, _) => data.translation.push(paramsJoin(params)),
         lbl: (data, params, _) => data.label = paramsJoin(params),
         src: (data, params, _) => data.source = paramsJoin(params),
         num: (data, params, _) => data.number.value = paramsOne(params),
@@ -42,7 +42,7 @@ export class GlossParser {
         // Replace underscores with spaces
         glaspaces: { type: "flag", key: ["altSpaces"] },
 
-        // Enable advanced text markup
+        // Enable inline link/footnote parsing
         markup: { type: "flag", key: ["useMarkup"] },
     };
 
@@ -90,8 +90,8 @@ export class GlossParser {
         arrayFill(data.elements, params.length, () => createGlossElement());
 
         for (const [index, elem] of data.elements.entries()) {
-            arrayFill(elem.levels, level + 1, () => "");
-            elem.levels[level] = params[index]?.value ?? "";
+            arrayFill(elem.levels, level + 1, () => createGlossLevelCell());
+            elem.levels[level] = createGlossLevelCell(params[index]?.value ?? "");
         }
     }
 
@@ -101,13 +101,27 @@ export class GlossParser {
         checkNoValues(params);
         checkValueSimple(params.first(), "invalid gloss element");
 
-        const bits = gatherValuesQuoted(params);
+        const mergedParams = mergeClassSuffixTokens(params);
+        const bits = gatherValuesQuoted(mergedParams);
         const maxLevel = bits.reduce((acc, el) => Math.max(acc, el.length), 0);
 
         arrayFill(data.elements, bits.length, () => createGlossElement());
 
         for (const [index, elem] of data.elements.entries()) {
-            arrayFill(elem.levels, maxLevel, bit => bits[index][bit] ?? "");
+            const tokenBits = bits[index] ?? [];
+            const tokenValue = tokenBits[0] ?? "";
+            const tokenParsed = parseTokenClasses(tokenValue);
+
+            elem.tokenClasses = tokenParsed.classes;
+
+            arrayFill(elem.levels, maxLevel, () => createGlossLevelCell());
+            elem.levels[0] = createGlossLevelCell(tokenParsed.text);
+
+            for (let levelIndex = 1; levelIndex < maxLevel; levelIndex += 1) {
+                const cellValue = tokenBits[levelIndex] ?? "";
+                const cellParsed = parseTokenClasses(cellValue);
+                elem.levels[levelIndex] = createGlossLevelCell(cellParsed.text, cellParsed.classes);
+            }
         }
     }
 
@@ -150,3 +164,36 @@ export class GlossParser {
         }
     }
 }
+
+const parseTokenClasses = (value: string): { text: string; classes: string[] } => {
+    const match = value.match(/^(.*)\{([^}]*)\}$/);
+    if (match == null) return { text: value, classes: [] };
+
+    const text = match[1];
+    const classList = match[2].split(",").map(cls => cls.trim()).filter(cls => cls.length > 0);
+
+    return {
+        text,
+        classes: sanitizeClassNames(classList),
+    };
+};
+
+const mergeClassSuffixTokens = (params: IToken[]): IToken[] => {
+    const merged: IToken[] = [];
+
+    for (const param of params) {
+        if (
+            param.type === "simple"
+            && param.value.startsWith("{")
+            && param.value.endsWith("}")
+            && merged.length > 0
+        ) {
+            merged[merged.length - 1].value += param.value;
+            continue;
+        }
+
+        merged.push({ ...param });
+    }
+
+    return merged;
+};
