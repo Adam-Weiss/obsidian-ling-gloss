@@ -1,58 +1,33 @@
-import { IGlossData, IGlossOptions, createGlossData, createGlossElement, createGlossLevelCell } from "src/data/gloss";
-import { IToken, ICommand, CommandTable, SetOptionTable } from "src/data/parser";
+import { IGlossData, createGlossData, createGlossElement, createGlossLevelCell } from "src/data/gloss";
+import { IToken, ICommand } from "src/data/parser";
 import { PluginSettingsWrapper } from "src/settings/wrapper";
-import { Result, resultOk, resultErr, arrayFill, TObject, sanitizeClassNames } from "src/utils";
+import { Result, resultOk, resultErr, arrayFill, sanitizeClassNames } from "src/utils";
 
-import { paramsJoin, paramsOne, checkNoValues, checkMultiValues, checkAnyValues, checkValueSimple, checkAssertion, gatherValuesQuoted, updateObjectField } from "./helpers";
+import { paramsJoin, paramsOne, checkNoValues, checkValueSimple, gatherValuesQuoted } from "./helpers";
 import { tokenize } from "./tokenize";
 
 
+const TibetanRegex = /[\u0F00-\u0FFF]/;
+
 export class GlossParser {
-    private commandTable: CommandTable<IGlossData> = {
-        // Simple string value commands
-        ex: (data, params, _) => data.preamble = paramsJoin(params),
-        ft: (data, params, _) => data.translation.push(paramsJoin(params)),
-        lbl: (data, params, _) => data.label = paramsJoin(params),
-        src: (data, params, _) => data.source = paramsJoin(params),
-        num: (data, params, _) => data.number.value = paramsOne(params),
-
-        // Individual gloss level commands
-        gla: (data, params, _) => this.handleGlossCommand(data, params, 0),
-        glb: (data, params, _) => this.handleGlossCommand(data, params, 1),
-        glc: (data, params, _) => this.handleGlossCommand(data, params, 2),
-
-        // Combined n-level gloss command
+    private commandTable: Record<string, (data: IGlossData, params: IToken[], commandName: { base: string; classes: string[] }) => void> = {
+        ex: (data, params, commandName) => data.preamble = createGlossLevelCell(paramsJoin(params), commandName.classes),
+        ft: (data, params, commandName) => data.translation.push(createGlossLevelCell(paramsJoin(params), commandName.classes)),
+        lbl: (data, params, commandName) => data.label = createGlossLevelCell(paramsJoin(params), commandName.classes),
+        src: (data, params, commandName) => data.source = createGlossLevelCell(paramsJoin(params), commandName.classes),
+        num: (data, params, commandName) => data.number = { value: paramsOne(params) },
         gl: (data, params, _) => this.handleMultiGlossCommand(data, params),
-
-        // Gloss option changing command
-        set: (data, params, star) => this.handleSetCommand(data, params, star),
-    };
-
-    private setOptionTable: SetOptionTable<IGlossOptions> = {
-        // Assign CSS style classes
-        style: { type: "list", key: ["styles", "global"] },
-        exstyle: { type: "list", key: ["styles", "preamble"] },
-        glastyle: { type: "list", key: ["styles", "levelA"] },
-        glbstyle: { type: "list", key: ["styles", "levelB"] },
-        glcstyle: { type: "list", key: ["styles", "levelC"] },
-        glxstyle: { type: "list", key: ["styles", "levelX"] },
-        ftstyle: { type: "list", key: ["styles", "translation"] },
-        srcstyle: { type: "list", key: ["styles", "source"] },
-
-        // Replace underscores with spaces
-        glaspaces: { type: "flag", key: ["altSpaces"] },
-
-        // Enable inline link/footnote parsing
-        markup: { type: "flag", key: ["useMarkup"] },
+        style: (data, params, _) => data.containerClasses.push(...sanitizeClassNames(params.map(param => param.value))),
+        box: (data, params, _) => this.handleBoxCommand(data, params),
     };
 
     constructor (private settings: PluginSettingsWrapper) { }
 
-    parse(input: string, nlevel: boolean): Result<IGlossData> {
+    parse(input: string): Result<IGlossData> {
         const tokenized = tokenize(input);
         if (!tokenized.success) return resultErr(tokenized.errors);
 
-        const glossData = createGlossData(nlevel, this.settings.get("gloss"));
+        const glossData = createGlossData(this.settings.get("gloss"));
 
         const procErrors = this.processCommands(tokenized.data, glossData);
         if (procErrors !== null) return resultErr(procErrors);
@@ -65,10 +40,11 @@ export class GlossParser {
 
         for (const command of commands) {
             try {
-                const action = this.commandTable[command.name];
+                const commandName = parseCommandName(command.name);
+                const action = this.commandTable[commandName.base];
                 if (action == null) throw "command “@@” is not known";
 
-                action(data, command.params, command.star);
+                action(data, command.params, commandName);
             } catch (error) {
                 error = `${error} (line ${command.lineNo})`
                     .replace("@@", command.name)
@@ -82,29 +58,7 @@ export class GlossParser {
         return errors;
     }
 
-    private handleGlossCommand(data: IGlossData, params: IToken[], level: number) {
-        if (data.nlevel) throw "command “@@” is only allowed in regular mode";
-
-        checkNoValues(params);
-
-        arrayFill(data.elements, params.length, () => createGlossElement());
-
-        for (const [index, elem] of data.elements.entries()) {
-            arrayFill(elem.levels, level + 1, () => createGlossLevelCell());
-            const tokenValue = params[index]?.value ?? "";
-            const parsed = parseBoxOverrideSuffix(tokenValue);
-
-            if (parsed.boxOverride) {
-                elem.boxOverride = parsed.boxOverride;
-            }
-
-            elem.levels[level] = createGlossLevelCell(parsed.text);
-        }
-    }
-
     private handleMultiGlossCommand(data: IGlossData, params: IToken[]) {
-        if (!data.nlevel) throw "command “@@” is only allowed in n-level mode";
-
         checkNoValues(params);
         checkValueSimple(params.first(), "invalid gloss element");
 
@@ -125,7 +79,7 @@ export class GlossParser {
             }
 
             arrayFill(elem.levels, maxLevel, () => createGlossLevelCell());
-            elem.levels[0] = createGlossLevelCell(tokenParsed.text);
+            elem.levels[0] = createGlossLevelCell(this.maybeAssistTsekToken(tokenParsed.text, data.options.tsekTokenAssist));
 
             for (let levelIndex = 1; levelIndex < maxLevel; levelIndex += 1) {
                 const cellValue = tokenBits[levelIndex] ?? "";
@@ -138,45 +92,36 @@ export class GlossParser {
         }
     }
 
-    private handleSetCommand(data: IGlossData, params: IToken[], star: boolean) {
-        const [optionParam, ...valueParams] = params;
-        checkValueSimple(optionParam, "no option name");
+    private maybeAssistTsekToken(token: string, enabled: boolean): string {
+        if (!enabled) return token;
+        if (!TibetanRegex.test(token)) return token;
+        if (token.includes(" ")) return token;
 
-        const option = this.setOptionTable[optionParam!.value];
-        checkAssertion(option != null, "unknown option “@1”");
+        const tsekCount = (token.match(/་/g) ?? []).length;
+        if (tsekCount < 2) return token;
 
-        const object = data.options as TObject;
-        const objectKeys = option.key as string[];
+        return token.replace(/་/g, "་ ").trim();
+    }
 
-        switch (option.type) {
-            case "flag":
-                checkAnyValues(valueParams);
-
-                // `set` – enable the flag, `set*` – disable the flag
-                updateObjectField(object, objectKeys, () => !star);
-                break;
-
-            case "one":
-                checkNoValues(valueParams);
-                checkMultiValues(valueParams);
-
-                updateObjectField(object, objectKeys, () => valueParams[0].value);
-                break;
-
-            case "list":
-                // Do not allow no values when appending
-                if (!star) checkNoValues(valueParams);
-
-                updateObjectField(object, objectKeys, (value: string[]) => {
-                    const newValue = valueParams.map(p => p.value);
-
-                    // `set` – append to the list, `set*` – replace the list
-                    return star ? newValue : [...value, ...newValue];
-                });
-                break;
+    private handleBoxCommand(data: IGlossData, params: IToken[]) {
+        const mode = paramsOne(params).toLowerCase();
+        if (mode !== "on" && mode !== "off" && mode !== "auto") {
+            throw "unknown box mode “@1”";
         }
+
+        data.boxModeOverride = mode;
     }
 }
+
+const parseCommandName = (command: string): { base: string; classes: string[] } => {
+    const match = command.match(/^([a-z]+)(\{([^}]*)\})?$/i);
+    if (match == null) return { base: command, classes: [] };
+
+    return {
+        base: match[1].toLowerCase(),
+        classes: sanitizeClassNames((match[3] ?? "").split(",").map(cls => cls.trim())),
+    };
+};
 
 const parseTokenClasses = (value: string): { text: string; classes: string[]; boxOverride: "box" | "nobox" | null } => {
     const match = value.match(/^(.*)\{([^}]*)\}$/);
@@ -192,16 +137,6 @@ const parseTokenClasses = (value: string): { text: string; classes: string[]; bo
         text,
         classes: sanitizeClassNames(classes),
         boxOverride,
-    };
-};
-
-const parseBoxOverrideSuffix = (value: string): { text: string; boxOverride: "box" | "nobox" | null } => {
-    const match = value.match(/^(.*)\{#(no)?box\}$/i);
-    if (match == null) return { text: value, boxOverride: null };
-
-    return {
-        text: match[1],
-        boxOverride: match[2] ? "nobox" : "box",
     };
 };
 

@@ -1,7 +1,7 @@
 {
 	"name": "ling-gloss-plus",
-	"version": "2.3.0",
-	"description": "Format interlinear glosses used in linguistics texts.",
+	"version": "2.4.0",
+	"description": "Tibetan-optimized ngloss-only interlinear glossing for Obsidian.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",

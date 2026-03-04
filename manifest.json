@@ -1,9 +1,9 @@
 {
 	"id": "ling-gloss-plus",
-	"name": "Interlinear Glossing Plus",
-	"version": "2.3.0",
+	"name": "Tibetan Gloss (ngloss)",
+	"version": "2.4.0",
 	"minAppVersion": "0.15.0",
-	"description": "Format interlinear glosses used in linguistics texts.",
+	"description": "Tibetan-optimized ngloss-only interlinear glossing for Obsidian.",
 	"author": "Mijyuoon",
 	"authorUrl": "https://github.com/Mijyuoon",
 	"isDesktopOnly": false

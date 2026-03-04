@@ -2,19 +2,15 @@ import { deepCopy } from "src/utils";
 
 
 export interface IGlossOptionStyles {
-    global: string[];
-    levelA: string[];
-    levelB: string[];
-    levelC: string[];
-    levelX: string[];
-    preamble: string[];
-    translation: string[];
-    source: string[];
+    surface: string[];
+    gloss: string[];
+    tags: string[];
+    extra: string[];
 }
 
 export interface IGlossOptions {
-    useMarkup: boolean;
     altSpaces: boolean;
+    tsekTokenAssist: boolean;
     styles: IGlossOptionStyles;
 }
 
@@ -39,29 +35,26 @@ export interface IGlossElement {
 }
 
 export interface IGlossData {
-    nlevel: boolean;
     options: IGlossOptions;
+    containerClasses: string[];
+    boxModeOverride: "off" | "on" | "auto" | null;
     number: IGlossNumber;
-    label: string;
-    preamble: string;
+    label: IGlossLevelCell;
+    preamble: IGlossLevelCell;
     elements: IGlossElement[];
-    translation: string[];
-    source: string;
+    translation: IGlossLevelCell[];
+    source: IGlossLevelCell;
 }
 
 
 export const getDefaultGlossOptions = (): IGlossOptions => ({
-    useMarkup: true,
     altSpaces: false,
+    tsekTokenAssist: true,
     styles: {
-        global: [],
-        levelA: [],
-        levelB: [],
-        levelC: [],
-        levelX: [],
-        preamble: [],
-        translation: [],
-        source: [],
+        surface: [],
+        gloss: [],
+        tags: [],
+        extra: [],
     },
 });
 
@@ -76,15 +69,16 @@ export const createGlossLevelCell = (text = "", classes: string[] = []): IGlossL
     classes,
 });
 
-export const createGlossData = (nlevel: boolean, options?: IGlossOptions): IGlossData => ({
-    nlevel,
+export const createGlossData = (options?: IGlossOptions): IGlossData => ({
     options: deepCopy(options) ?? getDefaultGlossOptions(),
+    containerClasses: [],
+    boxModeOverride: null,
     number: {
         value: "",
     },
-    label: "",
-    preamble: "",
+    label: createGlossLevelCell(),
+    preamble: createGlossLevelCell(),
     translation: [],
-    source: "",
+    source: createGlossLevelCell(),
     elements: [],
 });
