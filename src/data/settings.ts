@@ -2,17 +2,16 @@ import { IGlossOptions, getDefaultGlossOptions } from "./gloss";
 
 
 export type GlossAlignMode = "none" | "default" | "custom";
-export type GlossDefaultSyntax = "gloss" | "ngloss";
 export type TranslationRendering = "stacked" | "paragraph";
 export type BoxTokenMode = "off" | "on" | "auto";
 export type WrapBehavior = "wrap" | "nowrap";
+export type ParticleSpaceWidth = "hair" | "thin" | "normal";
 
 export interface IPluginSettings {
     alignMode: GlossAlignMode;
     alignCenter: boolean;
     alignLevel: number;
     alignCustom: string[];
-    defaultSyntax: GlossDefaultSyntax;
     translationRendering: TranslationRendering;
     compactMode: boolean;
     boxTokens: BoxTokenMode;
@@ -27,6 +26,9 @@ export interface IPluginSettings {
     lineHeight: number;
     wrapBehavior: WrapBehavior;
     maxWidth: number;
+    particleSpacingAfterLinks: boolean;
+    particleSpaceWidth: ParticleSpaceWidth;
+    particleList: string[];
     gloss: IGlossOptions;
 }
 
@@ -38,7 +40,6 @@ export const getDefaultPluginSettings = (): IPluginSettings => ({
     alignCenter: false,
     alignLevel: 0,
     alignCustom: getDefaultAlignMarkers(),
-    defaultSyntax: "gloss",
     translationRendering: "stacked",
     compactMode: false,
     boxTokens: "off",
@@ -53,5 +54,8 @@ export const getDefaultPluginSettings = (): IPluginSettings => ({
     lineHeight: 0,
     wrapBehavior: "wrap",
     maxWidth: 0,
+    particleSpacingAfterLinks: true,
+    particleSpaceWidth: "thin",
+    particleList: ["ས་", "ར་", "འི་", "འོ་", "ན་", "མ་"],
     gloss: getDefaultGlossOptions(),
 });

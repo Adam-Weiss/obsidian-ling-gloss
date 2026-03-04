@@ -16,14 +16,11 @@ export default class LingGlossPlugin extends Plugin {
 
         this.addSettingTab(new PluginSettingsTab(this, this.settings));
 
-        this.registerMarkdownCodeBlockProcessor("gloss", (src, el, _) => this.processGlossMarkdown(src, el, "gloss"));
-        this.registerMarkdownCodeBlockProcessor("ngloss", (src, el, _) => this.processGlossMarkdown(src, el, "ngloss"));
+        this.registerMarkdownCodeBlockProcessor("ngloss", (src, el, _) => this.processGlossMarkdown(src, el));
     }
 
-    private processGlossMarkdown(source: string, el: HTMLElement, tag: "gloss" | "ngloss") {
-        const defaultSyntax = this.settings.get("defaultSyntax");
-        const nlevel = tag === "ngloss" || (tag === "gloss" && defaultSyntax === "ngloss");
-        const glossData = this.parser.parse(source, nlevel);
+    private processGlossMarkdown(source: string, el: HTMLElement) {
+        const glossData = this.parser.parse(source);
 
         if (glossData.success) {
             this.renderer.renderGloss(el, glossData.data);

@@ -1,5 +1,5 @@
 import { IGlossData, InlineNode, IGlossLevelCell, IGlossElement } from "src/data/gloss";
-import { BoxTokenMode, getDefaultAlignMarkers } from "src/data/settings";
+import { BoxTokenMode, ParticleSpaceWidth, getDefaultAlignMarkers } from "src/data/settings";
 import { PluginSettingsWrapper } from "src/settings/wrapper";
 import { sanitizeClassNames } from "src/utils";
 
@@ -11,6 +11,9 @@ interface IFormatFlags {
     glaSpaces?: boolean;
     useMarkup?: boolean;
 }
+
+const TibetanRegex = /[\u0F00-\u0FFF]/;
+const TibetanEndingSkipRegex = /[་།༎\s]$/;
 
 export class GlossRenderer {
     constructor(private settings: PluginSettingsWrapper) { }
@@ -24,7 +27,7 @@ export class GlossRenderer {
     }
 
     renderGloss(target: HTMLElement, data: IGlossData) {
-        const { styles, altSpaces, useMarkup } = data.options;
+        const { styles, altSpaces } = data.options;
         const {
             compactMode,
             centerTokens,
@@ -73,19 +76,20 @@ export class GlossRenderer {
         });
 
         const gloss = container.createDiv({
-            cls: [getStyleKind("body"), ...getStyleClasses(styles.global)]
+            cls: [getStyleKind("body"), ...getStyleClasses(data.containerClasses)]
         });
 
         renderBlock(gloss, {
             kind: "label",
-            text: data.label,
+            cls: data.label.classes,
+            text: this.getCellText(data.label),
         });
 
         renderBlock(gloss, {
             kind: "preamble",
-            cls: styles.preamble,
-            text: data.preamble,
-            format: (text) => this.formatText(text, { useMarkup }),
+            cls: data.preamble.classes,
+            text: this.getCellText(data.preamble),
+            format: (text) => this.formatInlineText(text, data.preamble, { useMarkup: true }),
         });
 
         if (data.elements.length > 0) {
@@ -95,7 +99,7 @@ export class GlossRenderer {
 
             for (const elementData of data.elements) {
                 const { levels } = elementData;
-                const boxToken = this.shouldBoxToken(elementData, boxTokens);
+                const boxToken = this.shouldBoxToken(elementData, data.boxModeOverride ?? boxTokens);
                 const element = elements.createDiv({
                     cls: [
                         getStyleKind("element"),
@@ -116,15 +120,12 @@ export class GlossRenderer {
                     } else if (!isLeft && isRight) {
                         element.addClass(getStyleKind("align-right"));
                     } else if (this.settings.get("alignCenter")) {
-                        // Center align if either none or both sides have a marker
                         element.addClass(getStyleKind("align-center"));
                     }
                 }
 
                 for (const [levelNo, level] of levels.entries()) {
                     const [levelKind, styleKey] = getLevelMetadata(levelNo);
-
-                    // Alternative whitespace syntax only for level-A elements
                     const glaSpaces = altSpaces && levelNo === 0;
 
                     renderBlock(element, {
@@ -134,7 +135,7 @@ export class GlossRenderer {
                         text: this.getCellText(level),
                         always: true,
                         format: (text) => this.formatInlineText(text, level, {
-                            useMarkup: useMarkup && levelNo === 0,
+                            useMarkup: levelNo === 0,
                             glaSpaces,
                             useNbsp: true,
                         }),
@@ -143,46 +144,50 @@ export class GlossRenderer {
             }
         }
 
-        if (data.translation.length > 0 || data.source.length > 0) {
+        if (data.translation.length > 0 || this.getCellText(data.source).length > 0) {
             const postamble = gloss.createDiv({ cls: getStyleKind("postamble") });
 
             if (data.translation.length > 0) {
                 const translations = translationRendering === "paragraph"
-                    ? [data.translation.join(" ")]
+                    ? [createCell(data.translation.map(line => this.getCellText(line)).join(" "), data.translation[0]?.classes ?? [])]
                     : data.translation;
 
                 for (const translation of translations) {
                     renderBlock(postamble, {
                         kind: "translation",
-                        cls: styles.translation,
-                        text: translation,
-                        format: (text) => this.formatText(text, { useMarkup }),
+                        cls: translation.classes,
+                        text: this.getCellText(translation),
+                        format: (text) => this.formatText(text),
                     });
                 }
             }
 
             renderBlock(postamble, {
                 kind: "source",
-                cls: styles.source,
-                text: data.source,
+                cls: data.source.classes,
+                text: this.getCellText(data.source),
+                format: (text) => this.formatText(text),
             });
-        }
-
-        if (!gloss.hasChildNodes()) {
-            return this.renderErrors(target, ["this gloss contains no elements"]);
         }
     }
 
     private getAlignMarkers(): string[] | null {
-        switch (this.settings.get("alignMode")) {
-            case "none": return null;
-            case "default": return getDefaultAlignMarkers();
-            case "custom": return this.settings.get("alignCustom");
+        const { alignMode, alignCustom } = this.settings.get();
+
+        switch (alignMode) {
+            case "none":
+                return null;
+            case "default":
+                return getDefaultAlignMarkers();
+            case "custom":
+                return alignCustom;
+            default:
+                return null;
         }
     }
 
-    private formatText(text: string, format: IFormatFlags): string | DocumentFragment {
-        return this.formatInlineText(text, { nodes: [{ type: "text", text }], classes: [] }, format);
+    private formatText(text: string): string {
+        return formatWhitespace(text);
     }
 
     private formatInlineText(text: string, cell: IGlossLevelCell, format: IFormatFlags): string | DocumentFragment {
@@ -193,7 +198,9 @@ export class GlossRenderer {
         const fragment = document.createDocumentFragment();
         const nodes = this.getInlineNodes(cell);
 
-        for (const node of nodes) {
+        for (let idx = 0; idx < nodes.length; idx += 1) {
+            const node = nodes[idx];
+            const next = nodes[idx + 1];
             switch (node.type) {
                 case "text": {
                     const textNode = document.createTextNode(this.formatPlainText(node.text, format));
@@ -207,12 +214,17 @@ export class GlossRenderer {
                     link.setAttribute("data-href", node.target);
                     link.textContent = this.formatPlainText(node.label, format);
                     fragment.appendChild(link);
+
+                    const spacing = this.getParticleSpacing(next);
+                    if (spacing) {
+                        fragment.appendChild(document.createTextNode(spacing));
+                    }
                     break;
                 }
                 case "footnoteRef": {
                     const sup = document.createElement("sup");
                     sup.classList.add("ling-footnote-ref");
-                    sup.textContent = `[^${node.id}]`;
+                    sup.textContent = `^^${node.id}^^`;
                     fragment.appendChild(sup);
                     break;
                 }
@@ -222,10 +234,29 @@ export class GlossRenderer {
         return fragment;
     }
 
+    private getParticleSpacing(nextNode?: InlineNode): string {
+        const { particleSpacingAfterLinks, particleSpaceWidth, particleList } = this.settings.get();
+        if (!particleSpacingAfterLinks || nextNode?.type !== "text") return "";
+
+        const trimmed = nextNode.text.trimStart();
+        if (!particleList.some(particle => trimmed.startsWith(particle))) return "";
+
+        return this.getParticleSpaceChar(particleSpaceWidth);
+    }
+
+    private getParticleSpaceChar(mode: ParticleSpaceWidth): string {
+        switch (mode) {
+            case "hair": return "\u200A";
+            case "normal": return " ";
+            case "thin":
+            default:
+                return "\u2009";
+        }
+    }
+
     private formatPlainText(text: string, format: IFormatFlags): string {
         if (format.glaSpaces) {
-            // Replace underscores with whitespace
-            text = text.replace(/[_]+/, " ");
+            text = text.replace(/[_]+/g, " ");
         }
 
         return formatWhitespace(text, format.useNbsp);
@@ -254,14 +285,10 @@ export class GlossRenderer {
         if (element.boxOverride === "nobox") return false;
 
         switch (mode) {
-            case "on":
-                return true;
-            case "off":
-                return false;
-            case "auto":
-                return this.isMultilineToken(element);
-            default:
-                return false;
+            case "on": return true;
+            case "off": return false;
+            case "auto": return this.isMultilineToken(element);
+            default: return false;
         }
     }
 
@@ -305,10 +332,7 @@ export class GlossRenderer {
             container.style.setProperty("--ling-line-height", `${styles.lineHeight}`);
         }
 
-        container.style.setProperty(
-            "--ling-max-width",
-            styles.maxWidth > 0 ? `${styles.maxWidth}rem` : "100%"
-        );
+        container.style.setProperty("--ling-max-width", styles.maxWidth > 0 ? `${styles.maxWidth}rem` : "100%");
     }
 
     private getTokenClassNames(classes: string[]): string[] {
@@ -320,13 +344,18 @@ export class GlossRenderer {
     }
 }
 
+const createCell = (text: string, classes: string[]): IGlossLevelCell => ({
+    nodes: [{ type: "text", text }],
+    classes,
+});
+
 const parseInlineNodes = (text: string): InlineNode[] => {
     const nodes: InlineNode[] = [];
     let index = 0;
 
     while (index < text.length) {
-        const wikiIndex = text.indexOf("[[", index);
-        const footIndex = text.indexOf("[^", index);
+        const wikiIndex = text.indexOf("<<", index);
+        const footIndex = text.indexOf("^^", index);
 
         let nextIndex = -1;
         let kind: "wiki" | "footnote" | null = null;
@@ -349,14 +378,15 @@ const parseInlineNodes = (text: string): InlineNode[] => {
         }
 
         if (kind === "wiki") {
-            const end = text.indexOf("]]", nextIndex + 2);
+            const end = text.indexOf(">>", nextIndex + 2);
             if (end === -1) {
                 nodes.push({ type: "text", text: text.slice(nextIndex) });
                 break;
             }
 
             const content = text.slice(nextIndex + 2, end);
-            const [target, label] = splitWikiContent(content);
+            const [rawTarget, label] = splitWikiContent(content);
+            const target = normalizeTibetanTarget(rawTarget);
 
             if (target.length === 0) {
                 nodes.push({ type: "text", text: text.slice(nextIndex, end + 2) });
@@ -364,13 +394,13 @@ const parseInlineNodes = (text: string): InlineNode[] => {
                 nodes.push({
                     type: "wikiLink",
                     target,
-                    label: label.length > 0 ? label : target,
+                    label: label.length > 0 ? label : rawTarget,
                 });
             }
 
             index = end + 2;
-        } else if (kind === "footnote") {
-            const end = text.indexOf("]", nextIndex + 2);
+        } else {
+            const end = text.indexOf("^^", nextIndex + 2);
             if (end === -1) {
                 nodes.push({ type: "text", text: text.slice(nextIndex) });
                 break;
@@ -378,12 +408,12 @@ const parseInlineNodes = (text: string): InlineNode[] => {
 
             const id = text.slice(nextIndex + 2, end);
             if (id.length === 0) {
-                nodes.push({ type: "text", text: text.slice(nextIndex, end + 1) });
+                nodes.push({ type: "text", text: text.slice(nextIndex, end + 2) });
             } else {
                 nodes.push({ type: "footnoteRef", id });
             }
 
-            index = end + 1;
+            index = end + 2;
         }
     }
 
@@ -394,8 +424,13 @@ const splitWikiContent = (content: string): [string, string] => {
     const splitIndex = content.indexOf("|");
     if (splitIndex === -1) return [content, ""];
 
-    return [
-        content.slice(0, splitIndex),
-        content.slice(splitIndex + 1),
-    ];
+    return [content.slice(0, splitIndex), content.slice(splitIndex + 1)];
+};
+
+const normalizeTibetanTarget = (target: string): string => {
+    const trimmed = target.trim();
+    if (!TibetanRegex.test(trimmed)) return trimmed;
+    if (TibetanEndingSkipRegex.test(trimmed)) return trimmed;
+
+    return `${trimmed}་`;
 };

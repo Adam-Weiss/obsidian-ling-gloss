@@ -10,12 +10,10 @@
 .ling-gloss-error {
     margin: 0.5em;
     color: #FF4040;
-    font-style: italic;
 }
 
 .ling-gloss-error::before {
     content: "❌ ";
-    font-style: normal;
 }
 
 /* Gloss element layout */
@@ -56,113 +54,50 @@
 
 /* Gloss element appearance */
 
-.ling-gloss-number::before {
-    content: "(";
-}
+.ling-gloss-number::before { content: "("; }
+.ling-gloss-number::after { content: ")"; }
+.ling-gloss-number:empty { visibility: hidden; }
 
-.ling-gloss-number::after {
-    content: ")";
-}
-
-.ling-gloss-number:empty {
-    visibility: hidden;
-}
-
-.ling-gloss-preamble {
-    font-weight: bold;
-}
+.ling-gloss-preamble { font-weight: bold; }
 
 .ling-gloss-translation {
-    font-style: italic;
     font-size: calc(1em * var(--ling-translation-scale, 1));
 }
 
-.ling-gloss-translation::before {
-    content: "“";
-}
+.ling-gloss-translation::before { content: "“"; }
+.ling-gloss-translation::after { content: "”"; }
 
-.ling-gloss-translation::after {
-    content: "”";
-}
-
-.ling-gloss-source::before {
-    content: "(";
-}
-
-.ling-gloss-source::after {
-    content: ")";
-}
-
-.ling-gloss-level-a {
-    font-style: italic;
-}
+.ling-gloss-source::before { content: "("; }
+.ling-gloss-source::after { content: ")"; }
 
 .ling-gloss-element {
     line-height: var(--ling-line-height, normal);
 }
 
 /* Gloss element horizontal alignment */
-
-.ling-gloss-element.ling-gloss-align-left {
-    text-align: start;
-}
-
-.ling-gloss-element.ling-gloss-align-right {
-    text-align: end;
-}
-
-.ling-gloss-element.ling-gloss-align-center {
-    text-align: center;
-}
+.ling-gloss-element.ling-gloss-align-left { text-align: start; }
+.ling-gloss-element.ling-gloss-align-right { text-align: end; }
+.ling-gloss-element.ling-gloss-align-center { text-align: center; }
 
 /* Gloss source layout overrides */
-
-.ling-gloss-source.ling-style-right {
-    flex-grow: 1 !important;
-    text-align: right !important;
-}
-
-.ling-gloss-source.ling-style-line {
-    flex-grow: 1 !important;
-    flex-basis: 100% !important;
-}
+.ling-gloss-source.ling-style-right { flex-grow: 1 !important; text-align: right !important; }
+.ling-gloss-source.ling-style-line { flex-grow: 1 !important; flex-basis: 100% !important; }
 
 /* Gloss source appearance overrides */
+.ling-gloss-source.ling-style-alt::before { content: "[" !important; }
+.ling-gloss-source.ling-style-alt::after { content: "]" !important; }
 
-.ling-gloss-source.ling-style-alt::before {
-    content: "[" !important;
-}
-
-.ling-gloss-source.ling-style-alt::after {
-    content: "]" !important;
-}
-
-/* Language-specific style overrides */
-
-.ling-gloss-level-a.ling-style-cjk {
-    font-style: unset !important;
-}
+/* Optional style helpers */
+.ling-style-ital { font-style: italic; }
+.ling-style-sc { font-variant: small-caps; }
 
 /* Inline link/footnote helpers */
-
-.ling-footnote-ref {
-    font-size: 0.85em;
-    vertical-align: super;
-}
+.ling-footnote-ref { font-size: 0.85em; vertical-align: super; }
 
 /* Design option helpers */
-
-.ling-opt-compact .ling-gloss-body > div:not(:last-child) {
-    margin-bottom: 0.25em;
-}
-
-.ling-opt-compact .ling-gloss-elements {
-    gap: var(--ling-token-gap-compact, 0.5em);
-}
-
-.ling-opt-compact .ling-gloss-postamble {
-    gap: 0 0.25em;
-}
+.ling-opt-compact .ling-gloss-body > div:not(:last-child) { margin-bottom: 0.25em; }
+.ling-opt-compact .ling-gloss-elements { gap: var(--ling-token-gap-compact, 0.5em); }
+.ling-opt-compact .ling-gloss-postamble { gap: 0 0.25em; }
 
 .ling-opt-tokenbox {
     padding: var(--ling-box-padding-block, 0.25em) var(--ling-box-padding-inline, 0.4em);
@@ -170,43 +105,5 @@
     border-radius: var(--ling-box-border-radius, 4px);
 }
 
-.ling-opt-center .ling-gloss-element {
-    text-align: center;
-}
-
-.ling-opt-nowrap .ling-gloss-elements {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-}
-
-@media print {
-    @page {
-        size: A4;
-        margin: 15mm;
-    }
-
-    .ling-gloss {
-        max-width: 100% !important;
-        font-size: 10pt;
-        color: #000;
-    }
-
-    .ling-gloss-elements {
-        gap: 0.6em;
-    }
-
-    .ling-gloss-element {
-        break-inside: avoid;
-        page-break-inside: avoid;
-    }
-
-    .ling-opt-tokenbox {
-        border-color: #666;
-        border-width: max(0.6px, var(--ling-box-border-width, 1px));
-    }
-
-    .ling-gloss a {
-        color: #000;
-        text-decoration: underline;
-    }
-}
+.ling-opt-center .ling-gloss-element { text-align: center; }
+.ling-opt-nowrap .ling-gloss-elements { flex-wrap: nowrap; overflow-x: auto; }
